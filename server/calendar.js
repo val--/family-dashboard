@@ -53,9 +53,9 @@ class CalendarService {
       const startOfToday = startOfDay(todayInParis);
       const startTime = zonedTimeToUtc(startOfToday, timezone).toISOString();
 
-      // Search up to 7 days ahead to find 3-5 events
-      const endDate = addDays(startOfToday, 7);
-      const endTime = zonedTimeToUtc(endDate, timezone).toISOString();
+          // Search up to 30 days ahead to find all upcoming events
+          const endDate = addDays(startOfToday, 30);
+          const endTime = zonedTimeToUtc(endDate, timezone).toISOString();
 
       const response = await this.calendar.events.list({
         calendarId: config.calendarId,
@@ -63,7 +63,7 @@ class CalendarService {
         timeMax: endTime,
         singleEvents: true,
         orderBy: 'startTime',
-        maxResults: 50 // Get more than needed, then filter
+            maxResults: 250 // Get all events, then filter
       });
 
       const events = response.data.items || [];
@@ -71,8 +71,11 @@ class CalendarService {
       // Format and filter events
       const formattedEvents = this.formatEvents(events, timezone);
       
-      // Limit to maxEvents
-      return formattedEvents.slice(0, config.maxEvents);
+      // Limit to maxEvents if specified, otherwise return all
+      if (config.maxEvents) {
+        return formattedEvents.slice(0, config.maxEvents);
+      }
+      return formattedEvents;
     } catch (error) {
       console.error('Error fetching calendar events:', error);
       throw error;
