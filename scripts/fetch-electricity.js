@@ -62,14 +62,6 @@ async function fetchAndDisplayElectricity() {
     console.log(`Week average: ${widgetData.weekAverage} kWh/day`);
     
     if (dailyData) {
-      console.log('\nDaily data structure:');
-      console.log('- Type:', typeof dailyData);
-      console.log('- Is array:', Array.isArray(dailyData));
-      if (typeof dailyData === 'object' && !Array.isArray(dailyData)) {
-        console.log('- Keys:', Object.keys(dailyData));
-      }
-      
-      // Try to find readings
       let readings = [];
       if (Array.isArray(dailyData)) {
         readings = dailyData;

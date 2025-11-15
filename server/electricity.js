@@ -220,9 +220,6 @@ class ElectricityService {
         console.warn('Could not fetch previous week data:', error.message);
       }
 
-      // Debug: log the structure of dailyData
-      console.log('Daily data structure:', JSON.stringify(dailyData, null, 2).substring(0, 500));
-
       // Calculate today's consumption
       const today = format(startOfToday, 'yyyy-MM-dd');
       let todayConsumption = 0;

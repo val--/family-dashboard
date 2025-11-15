@@ -1,70 +1,86 @@
 # Family Dashboard
 
-Dashboard for Raspberry Pi with 7-inch touchscreen display. Displays family calendar events from Google Calendar and electricity consumption data from MyElectricalData.
+Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la météo, les événements du calendrier familial depuis Google Calendar et les données de consommation électrique depuis MyElectricalData.
 
-## Features
+## Fonctionnalités
 
-- **Calendar Widget**: Display events from a shared Google Calendar
-  - Shows today's events and upcoming days
-  - Multi-day event support with start/end times
-  - School holiday indicators
-  - Click on events to see full details
-  - Full calendar page with all upcoming events
+- **Bandeau Météo** : Affiché en haut de toutes les pages
+  - Météo actuelle avec température, conditions et icône
+  - Prévisions sur 4 jours à venir
+  - Ville configurable (par défaut : Rezé)
+  - Actualisation automatique
 
-- **Electricity Widget**: Display electricity consumption from Linky meter
-  - Yesterday's consumption with comparison to previous day
-  - 7-day evolution chart (widget) / 15-day evolution chart (full page)
-  - 12-month monthly evolution
-  - Week comparison with previous week
-  - Contract information (subscribed power)
+- **Widget Calendrier** : Affiche les événements d'un calendrier Google partagé
+  - Affiche les événements du jour et des jours à venir
+  - Support des événements multi-jours avec heures de début/fin
+  - Indicateurs de vacances scolaires
+  - Cliquer sur les événements pour voir les détails complets
+  - Page calendrier complète avec tous les événements à venir
 
-- **Touchscreen Optimized**: Interface optimized for 7-inch touchscreen displays
-- **Auto-refresh**: Data refreshes every 5 minutes
-- **Multi-page Navigation**: Home page with widgets, dedicated pages for calendar and electricity
+- **Widget Électricité** : Affiche la consommation électrique du compteur Linky
+  - Consommation d'hier avec comparaison au jour précédent
+  - Graphique d'évolution sur 7 jours (widget) / 15 jours (page complète)
+  - Évolution mensuelle sur 12 mois
+  - Comparaison hebdomadaire avec la semaine précédente
+  - Informations du contrat (puissance souscrite)
 
-## Prerequisites
+- **Optimisé pour écran tactile** : Interface optimisée pour les écrans tactiles de 7 pouces
+- **Actualisation automatique** : Les données se rafraîchissent toutes les 5 minutes
+- **Navigation multi-pages** : Page d'accueil avec widgets, pages dédiées pour le calendrier et l'électricité
 
-- Node.js (v16 or higher)
-- Google account with access to the calendar
-- Google Service Account with calendar access
-- MyElectricalData account and token (for electricity widget)
+## Prérequis
 
-## Setup
+- Node.js (v16 ou supérieur)
+- Compte Google avec accès au calendrier
+- Compte de service Google avec accès au calendrier
+- Compte MyElectricalData et token (pour le widget électricité)
+- Compte OpenWeatherMap et clé API (pour le widget météo)
 
-### 1. Google Service Account
+## Configuration
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a project and enable Google Calendar API
-3. Create a Service Account in "IAM & Admin" > "Service Accounts"
-4. Create a JSON key and download it
-5. Run `npm run find-email` to get the Service Account email
+### 1. Compte de service Google
 
-### 2. Share Calendar
+1. Allez sur [Google Cloud Console](https://console.cloud.google.com/)
+2. Créez un projet et activez l'API Google Calendar
+3. Créez un compte de service dans "IAM & Admin" > "Comptes de service"
+4. Créez une clé JSON et téléchargez-la
+5. Exécutez `npm run find-email` pour obtenir l'email du compte de service
 
-1. Open [Google Calendar](https://calendar.google.com/)
-2. Share your calendar with the Service Account email (from step 1)
-3. Grant "See all event details" permission
+### 2. Partager le calendrier
 
-### 3. MyElectricalData Setup
+1. Ouvrez [Google Calendar](https://calendar.google.com/)
+2. Partagez votre calendrier avec l'email du compte de service (de l'étape 1)
+3. Accordez la permission "Voir tous les détails des événements"
 
-1. Go to [MyElectricalData](https://www.myelectricaldata.fr/)
-2. Register and get your token
-3. Find your "Point de Livraison" (PDL) number
+### 3. Configuration MyElectricalData
 
-### 4. Configure
+1. Allez sur [MyElectricalData](https://www.myelectricaldata.fr/)
+2. Inscrivez-vous et obtenez votre token
+3. Trouvez votre numéro de "Point de Livraison" (PDL)
 
-1. Place the downloaded Google Service Account JSON file in `credentials/service-account.json`
-2. Copy `.env.example` to `.env`:
+### 4. Configuration Météo
+
+1. Allez sur [OpenWeatherMap](https://openweathermap.org/api)
+2. Créez un compte gratuit
+3. Générez une clé API (gratuite, jusqu'à 1000 appels/jour)
+4. Ajoutez `WEATHER_API_KEY` dans votre fichier `.env`
+
+### 5. Configuration
+
+1. Placez le fichier JSON du compte de service Google téléchargé dans `credentials/service-account.json`
+2. Copiez `.env.example` vers `.env` :
    ```bash
    cp .env.example .env
    ```
-3. Edit `.env` and fill in your configuration:
-   - `CALENDAR_ID`: Your Google Calendar ID
-   - `MYELECTRICALDATA_PDL`: Your PDL number
-   - `MYELECTRICALDATA_TOKEN`: Your MyElectricalData token
-   - `TIMEZONE`: Your timezone (default: Europe/Paris)
+3. Éditez `.env` et remplissez votre configuration :
+   - `CALENDAR_ID` : Votre ID de calendrier Google
+   - `MYELECTRICALDATA_PDL` : Votre numéro PDL
+   - `MYELECTRICALDATA_TOKEN` : Votre token MyElectricalData
+   - `WEATHER_API_KEY` : Votre clé API OpenWeatherMap (gratuite sur [openweathermap.org](https://openweathermap.org/api))
+   - `WEATHER_CITY` : Nom de la ville pour la météo (par défaut : Rezé)
+   - `TIMEZONE` : Votre fuseau horaire (par défaut : Europe/Paris)
 
-The `.env` file is automatically loaded and is not committed to git (it's in `.gitignore`).
+Le fichier `.env` est automatiquement chargé et n'est pas commité dans git (il est dans `.gitignore`).
 
 ## Installation
 
@@ -72,16 +88,16 @@ The `.env` file is automatically loaded and is not committed to git (it's in `.g
 npm run install:all
 ```
 
-## Development
+## Développement
 
 ```bash
 npm run dev
 ```
 
-Backend: `http://localhost:5000`  
-Frontend: `http://localhost:3000`
+Backend : `http://localhost:5000`  
+Frontend : `http://localhost:3000`
 
-The server is accessible on your local network at `http://<your-ip>:5000`
+Le serveur est accessible sur votre réseau local à `http://<votre-ip>:5000`
 
 ## Production
 
@@ -92,28 +108,32 @@ NODE_ENV=production npm start
 
 ## Configuration
 
-Configuration is done via the `.env` file (see Setup section above). The following variables are available:
+La configuration se fait via le fichier `.env` (voir la section Configuration ci-dessus). Les variables suivantes sont disponibles :
 
-- `CALENDAR_ID`: Your Google Calendar ID
-- `TIMEZONE`: Timezone (default: Europe/Paris)
-- `MAX_EVENTS`: Maximum events to display (empty = no limit)
-- `CREDENTIALS_PATH`: Path to Google Service Account JSON file (default: ./credentials/service-account.json)
-- `MYELECTRICALDATA_PDL`: Your electricity delivery point number
-- `MYELECTRICALDATA_TOKEN`: Your MyElectricalData API token
-- `MYELECTRICALDATA_BASE_URL`: MyElectricalData API base URL (default: https://www.myelectricaldata.fr)
-- `MYELECTRICALDATA_USE_CACHE`: Use cache endpoints to reduce API load (default: true)
+- `CALENDAR_ID` : Votre ID de calendrier Google
+- `TIMEZONE` : Fuseau horaire (par défaut : Europe/Paris)
+- `MAX_EVENTS` : Nombre maximum d'événements à afficher (vide = pas de limite)
+- `CREDENTIALS_PATH` : Chemin vers le fichier JSON du compte de service Google (par défaut : ./credentials/service-account.json)
+- `MYELECTRICALDATA_PDL` : Votre numéro de point de livraison électrique
+- `MYELECTRICALDATA_TOKEN` : Votre token API MyElectricalData
+- `MYELECTRICALDATA_BASE_URL` : URL de base de l'API MyElectricalData (par défaut : https://www.myelectricaldata.fr)
+- `MYELECTRICALDATA_USE_CACHE` : Utiliser les endpoints de cache pour réduire la charge API (par défaut : true)
+- `WEATHER_API_KEY` : Clé API OpenWeatherMap (obligatoire pour le widget météo)
+- `WEATHER_CITY` : Nom de la ville pour la météo (par défaut : Rezé)
+- `WEATHER_UNITS` : Unités de température (metric, imperial, kelvin - par défaut : metric)
+- `WEATHER_LANG` : Langue des descriptions météo (par défaut : fr)
 
 ## Scripts
 
-- `npm run dev`: Start development server (backend + frontend)
-- `npm run build`: Build frontend for production
-- `npm run start`: Start production server
-- `npm run install:all`: Install all dependencies (root + client)
-- `npm run find-email`: Get Service Account email from credentials
-- `npm run fetch-events`: Test script to fetch calendar events
-- `npm run fetch-electricity`: Test script to fetch electricity data
+- `npm run dev` : Démarrer le serveur de développement (backend + frontend)
+- `npm run build` : Construire le frontend pour la production
+- `npm run start` : Démarrer le serveur de production
+- `npm run install:all` : Installer toutes les dépendances (racine + client)
+- `npm run find-email` : Obtenir l'email du compte de service depuis les credentials
+- `npm run fetch-events` : Script de test pour récupérer les événements du calendrier
+- `npm run fetch-electricity` : Script de test pour récupérer les données électriques
 
-## Deployment
+## Déploiement
 
 ### Docker (Recommandé)
 
@@ -167,91 +187,4 @@ docker-compose down
 
 # Arrêter, supprimer et nettoyer les volumes
 docker-compose down -v
-```
-
-#### Mise à jour
-
-```bash
-# Récupérer les dernières modifications
-git pull
-
-# Rebuild et redémarrer
-docker-compose up -d --build
-```
-
-#### Déploiement sur Freebox Delta / Serveur
-
-1. Transférez le projet sur votre serveur (via Git, SCP, etc.)
-2. Configurez le fichier `.env` et placez `credentials/service-account.json`
-3. Lancez `docker-compose up -d`
-
-Pour un accès depuis l'extérieur, configurez le port forwarding dans votre routeur/Freebox.
-
-### On Raspberry Pi
-
-1. Install Node.js on Raspberry Pi
-2. Clone the repository
-3. Place `credentials/service-account.json` on the Pi
-4. Copy `.env.example` to `.env` and configure it with your values
-5. Run `npm run install:all && npm run build`
-6. Start with PM2: `pm2 start server/index.js --name family-dashboard`
-7. Configure browser in kiosk mode with touch support
-
-### Browser Setup for Touch Support
-
-**Option 1: Using Chromium (recommended)**
-```bash
-# Install Chromium if not already installed
-sudo apt-get update
-sudo apt-get install chromium
-
-# Start in kiosk mode with touch support
-chromium --kiosk --touch-events=enabled --enable-touch-drag-drop http://localhost:5000
-```
-
-**Option 2: Auto-start on boot**
-Add to `/etc/xdg/lxsession/LXDE-pi/autostart`:
-```
-@chromium --kiosk --touch-events=enabled --enable-touch-drag-drop http://localhost:5000
-```
-
-**To exit kiosk mode:**
-Press `Alt+F4` or kill the process: `pkill chromium`
-
-## Security
-
-⚠️ **Important**: Never commit sensitive data to the repository!
-
-- `credentials/service-account.json` is in `.gitignore`
-- Use `server/config.example.js` as a template
-- Use environment variables for production deployments
-- Keep your MyElectricalData token secure
-
-## Project Structure
-
-```
-family-dashboard/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── App.jsx        # Main app with routing
-│   │   ├── Home.jsx       # Home page with widgets
-│   │   ├── Calendar.jsx   # Full calendar page
-│   │   ├── CalendarWidget.jsx  # Calendar widget
-│   │   ├── Electricity.jsx     # Full electricity page
-│   │   ├── ElectricityWidget.jsx  # Electricity widget
-│   │   └── ...
-│   └── package.json
-├── server/                 # Express backend
-│   ├── index.js           # Express server
-│   ├── calendar.js        # Google Calendar service
-│   ├── electricity.js     # MyElectricalData service
-│   ├── config.js          # Configuration (use config.example.js as template)
-│   └── config.example.js  # Example configuration
-├── credentials/            # Sensitive files (gitignored)
-│   └── service-account.json
-├── scripts/                # Utility scripts
-│   ├── find-service-account-email.js
-│   ├── fetch-events.js
-│   └── fetch-electricity.js
-└── package.json
 ```
