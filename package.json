@@ -1,0 +1,33 @@
+{
+  "name": "family-dashboard",
+  "version": "1.0.0",
+  "description": "Family calendar dashboard for Raspberry Pi",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "nodemon server/index.js",
+    "client:dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "node server/index.js",
+    "install:all": "npm install && cd client && npm install",
+    "find-email": "node scripts/find-service-account-email.js"
+  },
+  "keywords": [
+    "calendar",
+    "dashboard",
+    "raspberry-pi"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "date-fns-tz": "^2.0.0",
+    "express": "^4.18.2",
+    "googleapis": "^126.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}
+
