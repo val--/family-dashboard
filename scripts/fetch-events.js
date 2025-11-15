@@ -3,6 +3,9 @@
  * Usage: node scripts/fetch-events.js
  */
 
+// Load environment variables from .env file
+require('dotenv').config();
+
 const calendarService = require('../server/calendar');
 
 async function fetchEvents() {

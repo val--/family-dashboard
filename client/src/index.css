@@ -65,22 +65,30 @@ body {
   height: 100vh;
   width: 100vw;
   background: linear-gradient(to bottom, #f0f4f8 0%, #e8f0f5 100%);
+  overflow: hidden;
+}
+
+.home > div {
+  flex: 1 1 50%;
 }
 
 .home-left {
+  flex: 0 0 50%;
   width: 50%;
-  padding: 20px;
+  padding: 20px 10px 20px 20px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .home-right {
+  flex: 0 0 50%;
   width: 50%;
-  padding: 20px;
+  padding: 20px 20px 20px 10px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-left: 1px solid #e9ecef;
+  align-items: stretch;
+  justify-content: stretch;
+  box-sizing: border-box;
 }
 
 .home-placeholder {
@@ -90,6 +98,300 @@ body {
   font-style: italic;
 }
 
+/* Electricity Widget Styles */
+.electricity-widget {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.electricity-widget:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.electricity-widget-header {
+  padding: 16px 20px;
+  border-bottom: 2px solid #f39c12;
+  position: relative;
+}
+
+.electricity-widget-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(to right, #f39c12, #e67e22);
+}
+
+.electricity-widget-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.electricity-widget-content {
+  padding: 16px 20px;
+  flex: 1;
+  overflow-y: auto;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.electricity-widget-content::-webkit-scrollbar {
+  display: none;
+}
+
+.electricity-widget-loading,
+.electricity-widget-error,
+.electricity-widget-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.electricity-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.electricity-stat-card {
+  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 4px solid #f39c12;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.electricity-stat-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transform: translateX(2px);
+}
+
+.electricity-stat-today {
+  border-left-color: #3498db;
+}
+
+.electricity-stat-week {
+  border-left-color: #2ecc71;
+}
+
+.electricity-stat-power {
+  border-left-color: #9b59b6;
+}
+
+.electricity-stat-chart {
+  border-left-color: #1abc9c;
+  padding-bottom: 20px;
+}
+
+.electricity-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.electricity-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.electricity-stat-unit {
+  font-size: 14px;
+  font-weight: 500;
+  color: #868e96;
+  margin-left: 4px;
+}
+
+.electricity-stat-subvalue {
+  font-size: 13px;
+  color: #6c757d;
+  margin-top: 4px;
+}
+
+.electricity-stat-comparison {
+  font-size: 12px;
+  color: #868e96;
+  margin-top: 6px;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.electricity-stat-comparison-better {
+  color: #2ecc71;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.electricity-stat-comparison-worse {
+  color: #e74c3c;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.electricity-stat-comparison-same {
+  color: #95a5a6;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Chart styles */
+.electricity-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 120px;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+
+.electricity-chart-bar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+  position: relative;
+}
+
+.electricity-chart-bar-wrapper {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  min-height: 80px;
+}
+
+.electricity-chart-bar {
+  width: 100%;
+  max-width: 40px;
+  background: linear-gradient(to top, #3498db 0%, #5dade2 100%);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: all 0.3s ease;
+  min-height: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+.electricity-chart-bar-today {
+  min-height: 24px;
+}
+
+.electricity-chart-bar:hover {
+  background: linear-gradient(to top, #2980b9 0%, #3498db 100%);
+  transform: scaleY(1.05);
+  box-shadow: 0 3px 6px rgba(52, 152, 219, 0.3);
+}
+
+.electricity-chart-bar-value {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2c3e50;
+  white-space: nowrap;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -15px;
+  margin-top: -6px;
+  opacity: 0.8;
+}
+
+.electricity-chart-bar-today .electricity-chart-bar-value {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0;
+  color: #2c3e50;
+  font-style: italic;
+  font-size: 11px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.electricity-chart-bar[style*="height: 0%"] .electricity-chart-bar-value:not(.electricity-chart-bar-today .electricity-chart-bar-value),
+.electricity-chart-bar[style*="height: 0"] .electricity-chart-bar-value:not(.electricity-chart-bar-today .electricity-chart-bar-value) {
+  display: none;
+}
+
+.electricity-chart-label {
+  font-size: 11px;
+  color: #6c757d;
+  margin-top: 6px;
+  text-align: center;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Monthly chart styles */
+.electricity-stat-chart-monthly {
+  border-left-color: #9b59b6;
+}
+
+.electricity-chart-monthly {
+  height: 140px;
+  gap: 6px;
+}
+
+.electricity-chart-bar-monthly {
+  background: linear-gradient(to top, #9b59b6 0%, #bb8fce 100%);
+  box-shadow: 0 2px 4px rgba(155, 89, 182, 0.2);
+}
+
+.electricity-chart-bar-monthly:hover {
+  background: linear-gradient(to top, #8e44ad 0%, #9b59b6 100%);
+  box-shadow: 0 3px 6px rgba(155, 89, 182, 0.3);
+}
+
+.electricity-chart-label-monthly {
+  font-size: 10px;
+  transform: rotate(-45deg);
+  transform-origin: top left;
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  width: 60px;
+  text-align: left;
+  white-space: nowrap;
+}
+
 .calendar-widget {
   background: #ffffff;
   border-radius: 12px;
@@ -97,8 +399,10 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .calendar-widget:hover {
@@ -748,5 +1052,57 @@ body {
   .event-location {
     font-size: 10px;
   }
+}
+
+/* Electricity Page Styles */
+.electricity-page {
+  padding: 20px;
+  max-width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.electricity-page-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.electricity-page-header-left {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.electricity-page-main-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  grid-column: 2;
+}
+
+.electricity-page-header-right {
+  grid-column: 3;
+}
+
+.electricity-page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.electricity-page-content .electricity-widget {
+  height: auto;
+  min-height: 0;
+  flex: 1;
 }
 

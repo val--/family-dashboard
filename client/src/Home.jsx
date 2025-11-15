@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import CalendarWidget from './CalendarWidget';
+import ElectricityWidget from './ElectricityWidget';
 import { API_URL, REFRESH_INTERVAL, MAX_EVENTS_WIDGET } from './constants';
 
 function Home() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const [electricityData, setElectricityData] = useState(null);
+  const [electricityLoading, setElectricityLoading] = useState(true);
+  const [electricityError, setElectricityError] = useState(null);
 
   const fetchEvents = async () => {
     try {
@@ -27,13 +32,42 @@ function Home() {
     }
   };
 
+  const fetchElectricity = async () => {
+    try {
+      setElectricityError(null);
+      // Request 7 days for the widget (default)
+      const response = await fetch('/api/electricity');
+      const result = await response.json();
+      
+      if (result.success) {
+        setElectricityData(result.data);
+      } else {
+        throw new Error(result.message || 'Failed to fetch electricity data');
+      }
+    } catch (err) {
+      console.error('Error fetching electricity:', err);
+      setElectricityError(err.message || 'Erreur lors du chargement des données électriques');
+    } finally {
+      setElectricityLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
-    const interval = setInterval(() => {
+    fetchElectricity();
+    
+    const eventsInterval = setInterval(() => {
       fetchEvents();
     }, REFRESH_INTERVAL);
 
-    return () => clearInterval(interval);
+    const electricityInterval = setInterval(() => {
+      fetchElectricity();
+    }, REFRESH_INTERVAL);
+
+    return () => {
+      clearInterval(eventsInterval);
+      clearInterval(electricityInterval);
+    };
   }, []);
 
   return (
@@ -42,9 +76,12 @@ function Home() {
         <CalendarWidget events={events} loading={loading} error={error} />
       </div>
       <div className="home-right">
-        <div className="home-placeholder">
-          <p>Widget à venir</p>
-        </div>
+        <ElectricityWidget 
+          data={electricityData} 
+          loading={electricityLoading} 
+          error={electricityError}
+          compact={true}
+        />
       </div>
     </div>
   );

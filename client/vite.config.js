@@ -9,7 +9,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
-        changeOrigin: true
+        changeOrigin: true,
+        // Note: Connection errors during startup are normal and can be ignored
+        // They occur when Vite tries to connect before the backend is ready
       }
     }
   },

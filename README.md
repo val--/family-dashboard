@@ -1,20 +1,33 @@
-# Family Calendar Dashboard
+# Family Dashboard
 
-Google Calendar dashboard for Raspberry Pi with 7-inch touchscreen display.
+Dashboard for Raspberry Pi with 7-inch touchscreen display. Displays family calendar events from Google Calendar and electricity consumption data from MyElectricalData.
 
 ## Features
 
-- Display events from a shared Google Calendar
-- Auto-refresh every 10 minutes
-- Touchscreen-optimized interface for 7-inch displays
-- Shows today's events and upcoming days (up to 5 events)
-- Multi-day event support with start/end times
+- **Calendar Widget**: Display events from a shared Google Calendar
+  - Shows today's events and upcoming days
+  - Multi-day event support with start/end times
+  - School holiday indicators
+  - Click on events to see full details
+  - Full calendar page with all upcoming events
+
+- **Electricity Widget**: Display electricity consumption from Linky meter
+  - Yesterday's consumption with comparison to previous day
+  - 7-day evolution chart (widget) / 15-day evolution chart (full page)
+  - 12-month monthly evolution
+  - Week comparison with previous week
+  - Contract information (subscribed power)
+
+- **Touchscreen Optimized**: Interface optimized for 7-inch touchscreen displays
+- **Auto-refresh**: Data refreshes every 5 minutes
+- **Multi-page Navigation**: Home page with widgets, dedicated pages for calendar and electricity
 
 ## Prerequisites
 
 - Node.js (v16 or higher)
 - Google account with access to the calendar
 - Google Service Account with calendar access
+- MyElectricalData account and token (for electricity widget)
 
 ## Setup
 
@@ -32,10 +45,26 @@ Google Calendar dashboard for Raspberry Pi with 7-inch touchscreen display.
 2. Share your calendar with the Service Account email (from step 1)
 3. Grant "See all event details" permission
 
-### 3. Configure
+### 3. MyElectricalData Setup
 
-1. Place the downloaded JSON file in `credentials/service-account.json`
-2. Update `server/config.js` with your calendar ID
+1. Go to [MyElectricalData](https://www.myelectricaldata.fr/)
+2. Register and get your token
+3. Find your "Point de Livraison" (PDL) number
+
+### 4. Configure
+
+1. Place the downloaded Google Service Account JSON file in `credentials/service-account.json`
+2. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+3. Edit `.env` and fill in your configuration:
+   - `CALENDAR_ID`: Your Google Calendar ID
+   - `MYELECTRICALDATA_PDL`: Your PDL number
+   - `MYELECTRICALDATA_TOKEN`: Your MyElectricalData token
+   - `TIMEZONE`: Your timezone (default: Europe/Paris)
+
+The `.env` file is automatically loaded and is not committed to git (it's in `.gitignore`).
 
 ## Installation
 
@@ -52,6 +81,8 @@ npm run dev
 Backend: `http://localhost:5000`  
 Frontend: `http://localhost:3000`
 
+The server is accessible on your local network at `http://<your-ip>:5000`
+
 ## Production
 
 ```bash
@@ -61,20 +92,38 @@ NODE_ENV=production npm start
 
 ## Configuration
 
-Edit `server/config.js`:
+Configuration is done via the `.env` file (see Setup section above). The following variables are available:
 
-- `calendarId`: Your Google Calendar ID
-- `timezone`: Timezone (default: Europe/Paris)
-- `maxEvents`: Maximum events to display (default: 5)
+- `CALENDAR_ID`: Your Google Calendar ID
+- `TIMEZONE`: Timezone (default: Europe/Paris)
+- `MAX_EVENTS`: Maximum events to display (empty = no limit)
+- `CREDENTIALS_PATH`: Path to Google Service Account JSON file (default: ./credentials/service-account.json)
+- `MYELECTRICALDATA_PDL`: Your electricity delivery point number
+- `MYELECTRICALDATA_TOKEN`: Your MyElectricalData API token
+- `MYELECTRICALDATA_BASE_URL`: MyElectricalData API base URL (default: https://www.myelectricaldata.fr)
+- `MYELECTRICALDATA_USE_CACHE`: Use cache endpoints to reduce API load (default: true)
+
+## Scripts
+
+- `npm run dev`: Start development server (backend + frontend)
+- `npm run build`: Build frontend for production
+- `npm run start`: Start production server
+- `npm run install:all`: Install all dependencies (root + client)
+- `npm run find-email`: Get Service Account email from credentials
+- `npm run fetch-events`: Test script to fetch calendar events
+- `npm run fetch-electricity`: Test script to fetch electricity data
 
 ## Deployment
+
+### On Raspberry Pi
 
 1. Install Node.js on Raspberry Pi
 2. Clone the repository
 3. Place `credentials/service-account.json` on the Pi
-4. Run `npm run install:all && npm run build`
-5. Start with PM2: `pm2 start server/index.js --name family-dashboard`
-6. Configure browser in kiosk mode with touch support
+4. Copy `.env.example` to `.env` and configure it with your values
+5. Run `npm run install:all && npm run build`
+6. Start with PM2: `pm2 start server/index.js --name family-dashboard`
+7. Configure browser in kiosk mode with touch support
 
 ### Browser Setup for Touch Support
 
@@ -85,17 +134,52 @@ sudo apt-get update
 sudo apt-get install chromium
 
 # Start in kiosk mode with touch support
-./scripts/start-browser-pi.sh http://localhost:5000
-```
-
-**Option 2: Manual Chromium launch**
-```bash
 chromium --kiosk --touch-events=enabled --enable-touch-drag-drop http://localhost:5000
 ```
 
-**Option 3: Auto-start on boot**
+**Option 2: Auto-start on boot**
 Add to `/etc/xdg/lxsession/LXDE-pi/autostart`:
 ```
 @chromium --kiosk --touch-events=enabled --enable-touch-drag-drop http://localhost:5000
 ```
 
+**To exit kiosk mode:**
+Press `Alt+F4` or kill the process: `pkill chromium`
+
+## Security
+
+⚠️ **Important**: Never commit sensitive data to the repository!
+
+- `credentials/service-account.json` is in `.gitignore`
+- Use `server/config.example.js` as a template
+- Use environment variables for production deployments
+- Keep your MyElectricalData token secure
+
+## Project Structure
+
+```
+family-dashboard/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── App.jsx        # Main app with routing
+│   │   ├── Home.jsx       # Home page with widgets
+│   │   ├── Calendar.jsx   # Full calendar page
+│   │   ├── CalendarWidget.jsx  # Calendar widget
+│   │   ├── Electricity.jsx     # Full electricity page
+│   │   ├── ElectricityWidget.jsx  # Electricity widget
+│   │   └── ...
+│   └── package.json
+├── server/                 # Express backend
+│   ├── index.js           # Express server
+│   ├── calendar.js        # Google Calendar service
+│   ├── electricity.js     # MyElectricalData service
+│   ├── config.js          # Configuration (use config.example.js as template)
+│   └── config.example.js  # Example configuration
+├── credentials/            # Sensitive files (gitignored)
+│   └── service-account.json
+├── scripts/                # Utility scripts
+│   ├── find-service-account-email.js
+│   ├── fetch-events.js
+│   └── fetch-electricity.js
+└── package.json
+```

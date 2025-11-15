@@ -1,7 +1,11 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const calendarService = require('./calendar');
+const electricityService = require('./electricity');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,6 +28,23 @@ app.get('/api/events', async (req, res) => {
     console.error('Error in /api/events:', error);
     res.status(500).json({ 
       error: 'Failed to fetch calendar events', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+// Electricity API route
+app.get('/api/electricity', async (req, res) => {
+  try {
+    // Check if dailyChartDays parameter is provided (for widget with 15 days)
+    const dailyChartDays = req.query.dailyChartDays ? parseInt(req.query.dailyChartDays, 10) : 7;
+    const data = await electricityService.getWidgetData(dailyChartDays);
+    res.json({ data, success: true });
+  } catch (error) {
+    console.error('Error in /api/electricity:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch electricity data', 
       message: error.message,
       success: false 
     });

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Calendar from './Calendar';
 import Home from './Home';
+import Electricity from './Electricity';
 
 import { API_URL, REFRESH_INTERVAL } from './constants';
 
@@ -115,12 +116,124 @@ function CalendarPage() {
   );
 }
 
+function ElectricityPage() {
+  const [electricityData, setElectricityData] = useState(null);
+  const [electricityLoading, setElectricityLoading] = useState(true);
+  const [electricityError, setElectricityError] = useState(null);
+  const appRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Enable drag-to-scroll - simplified approach
+  useEffect(() => {
+    const container = appRef.current;
+    if (!container) return;
+
+    // Only handle mouse drag, let native touch scrolling work
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    const onMouseDown = (e) => {
+      if (e.target.closest('a, button, .electricity-stat-card')) return;
+      isDragging = true;
+      startY = e.clientY;
+      startScrollTop = container.scrollTop;
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const deltaY = e.clientY - startY;
+      container.scrollTop = startScrollTop - deltaY;
+      e.preventDefault();
+    };
+
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        container.style.cursor = '';
+        container.style.userSelect = '';
+      }
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  const fetchElectricity = async () => {
+    try {
+      setElectricityError(null);
+      // Request 15 days for the full page
+      const response = await fetch('/api/electricity?dailyChartDays=15');
+      const result = await response.json();
+      
+      if (result.success) {
+        setElectricityData(result.data);
+      } else {
+        throw new Error(result.message || 'Failed to fetch electricity data');
+      }
+    } catch (err) {
+      console.error('Error fetching electricity:', err);
+      setElectricityError(err.message || 'Erreur lors du chargement des données électriques');
+    } finally {
+      setElectricityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch immediately on mount
+    fetchElectricity();
+
+    // Set up automatic refresh
+    const interval = setInterval(() => {
+      fetchElectricity();
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (electricityLoading) {
+    return (
+      <div className="app">
+        <div className="loading">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (electricityError) {
+    return (
+      <div className="app">
+        <div className="error">
+          <h2>Erreur</h2>
+          <p>{electricityError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app" ref={appRef}>
+      <Electricity data={electricityData} loading={electricityLoading} error={electricityError} />
+    </div>
+  );
+}
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/electricity" element={<ElectricityPage />} />
       </Routes>
     </Router>
   );

@@ -1,7 +1,13 @@
 module.exports = {
-  calendarId: 'family03404702309255518191@group.calendar.google.com',
-  timezone: 'Europe/Paris',
-  maxEvents: null, // null = afficher tous les événements à venir (pas de limite)
-  credentialsPath: './credentials/service-account.json'
+  calendarId: process.env.CALENDAR_ID || 'YOUR_CALENDAR_ID@group.calendar.google.com',
+  timezone: process.env.TIMEZONE || 'Europe/Paris',
+  maxEvents: process.env.MAX_EVENTS ? parseInt(process.env.MAX_EVENTS, 10) : null, // null = afficher tous les événements à venir (pas de limite)
+  credentialsPath: process.env.CREDENTIALS_PATH || './credentials/service-account.json',
+  // MyElectricalData configuration
+  myElectricalData: {
+    baseUrl: process.env.MYELECTRICALDATA_BASE_URL || 'https://www.myelectricaldata.fr',
+    pointDeLivraison: process.env.MYELECTRICALDATA_PDL || 'YOUR_POINT_DE_LIVRAISON',
+    token: process.env.MYELECTRICALDATA_TOKEN || 'YOUR_MYELECTRICALDATA_TOKEN',
+    useCache: process.env.MYELECTRICALDATA_USE_CACHE !== 'false' // Use /cache/ endpoints to reduce API load
+  }
 };
-
