@@ -115,6 +115,78 @@ Configuration is done via the `.env` file (see Setup section above). The followi
 
 ## Deployment
 
+### Docker (Recommandé)
+
+Le projet peut être déployé facilement avec Docker et Docker Compose.
+
+#### Prérequis
+
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+
+#### Configuration
+
+1. **Créer le fichier `.env`** (si pas déjà fait) :
+   ```bash
+   cp .env.example .env
+   ```
+   Puis éditez `.env` avec vos valeurs.
+
+2. **Placer le fichier `credentials/service-account.json`** :
+   Assurez-vous que le fichier Google Service Account JSON est présent dans `credentials/service-account.json`
+
+#### Démarrage
+
+```bash
+# Build et démarrage
+docker-compose up -d
+
+# Voir les logs
+docker-compose logs -f
+
+# Arrêter
+docker-compose down
+```
+
+Le dashboard sera accessible sur `http://localhost:5000` (ou le port configuré dans `.env`).
+
+#### Commandes utiles
+
+```bash
+# Rebuild après modification du code
+docker-compose up -d --build
+
+# Voir les logs en temps réel
+docker-compose logs -f dashboard
+
+# Redémarrer le conteneur
+docker-compose restart dashboard
+
+# Arrêter et supprimer les conteneurs
+docker-compose down
+
+# Arrêter, supprimer et nettoyer les volumes
+docker-compose down -v
+```
+
+#### Mise à jour
+
+```bash
+# Récupérer les dernières modifications
+git pull
+
+# Rebuild et redémarrer
+docker-compose up -d --build
+```
+
+#### Déploiement sur Freebox Delta / Serveur
+
+1. Transférez le projet sur votre serveur (via Git, SCP, etc.)
+2. Configurez le fichier `.env` et placez `credentials/service-account.json`
+3. Lancez `docker-compose up -d`
+
+Pour un accès depuis l'extérieur, configurez le port forwarding dans votre routeur/Freebox.
+
 ### On Raspberry Pi
 
 1. Install Node.js on Raspberry Pi

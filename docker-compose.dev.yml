@@ -1,0 +1,20 @@
+version: '3.8'
+
+# Development docker-compose override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend-builder  # Stop at frontend build stage for dev
+    volumes:
+      # Mount source code for hot reload (if using nodemon in dev)
+      - ./server:/app/server
+      - ./client/src:/app/client/src
+    environment:
+      - NODE_ENV=development
+    # Override command for development
+    # command: npm run dev  # Uncomment if you want to run dev mode in container
+

@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+client/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+client/dist/
+client/build/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Documentation
+README.md
+*.md
+
+# Scripts (not needed in production)
+scripts/
+
+# Vite cache
+client/.vite/
+.vite/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Dump files
+scripts/*-dump.json
+
+# Credentials (will be mounted as volume)
+credentials/
+
