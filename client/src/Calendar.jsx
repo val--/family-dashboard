@@ -68,11 +68,27 @@ function Calendar({ events }) {
                 
                     const isSelected = selectedEvent === event.id;
                     
+                    // Generate a color based on event date for visual variety
+                    const dateHash = event.date ? new Date(event.date).getDate() : 0;
+                    const colors = [
+                      { border: '#3498db', bg: '#e8f4f8' }, // Blue
+                      { border: '#2ecc71', bg: '#e8f8f0' }, // Green
+                      { border: '#e74c3c', bg: '#fdeaea' }, // Red
+                      { border: '#f39c12', bg: '#fef5e7' }, // Orange
+                      { border: '#9b59b6', bg: '#f4ecf7' }, // Purple
+                      { border: '#1abc9c', bg: '#e8f8f5' }, // Turquoise
+                    ];
+                    const colorScheme = colors[dateHash % colors.length];
+                    
                     return (
                       <li key={event.id}>
                         <div 
                           className={`event-item ${isSelected ? 'event-item-selected' : ''}`}
                           onClick={() => setSelectedEvent(isSelected ? null : event.id)}
+                          style={!isSelected ? {
+                            '--event-border-color': colorScheme.border,
+                            borderLeftColor: colorScheme.border
+                          } : {}}
                         >
                           <div className="event-time">{timeDisplay}</div>
                           <div className="event-content">
