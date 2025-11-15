@@ -53,17 +53,19 @@ class CalendarService {
       const startOfToday = startOfDay(todayInParis);
       const startTime = zonedTimeToUtc(startOfToday, timezone).toISOString();
 
-          // Search up to 30 days ahead to find all upcoming events
-          const endDate = addDays(startOfToday, 30);
-          const endTime = zonedTimeToUtc(endDate, timezone).toISOString();
+      // Search up to 360 days ahead (1 year) to find all upcoming events
+      const endDate = addDays(startOfToday, 360);
+      const endTime = zonedTimeToUtc(endDate, timezone).toISOString();
 
+      // Fetch events from main calendar
       const response = await this.calendar.events.list({
         calendarId: config.calendarId,
         timeMin: startTime,
         timeMax: endTime,
         singleEvents: true,
         orderBy: 'startTime',
-            maxResults: 250 // Get all events, then filter
+        maxResults: 250,
+        showDeleted: false
       });
 
       const events = response.data.items || [];

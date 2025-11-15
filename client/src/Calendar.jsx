@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { format, isToday, isTomorrow, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { isSchoolHoliday } from './holidays';
 
 function Calendar({ events }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -54,6 +55,7 @@ function Calendar({ events }) {
       {sortedDateKeys.map((dateKey, dateIndex) => {
         const dateEvents = eventsByDate[dateKey];
         const dateTitle = getDateTitle(dateKey);
+        const isLastSection = dateIndex === sortedDateKeys.length - 1;
         
         return (
           <div key={dateKey} className="date-section">
@@ -69,7 +71,12 @@ function Calendar({ events }) {
                     const isSelected = selectedEvent === event.id;
                     
                     // Generate a color based on event date for visual variety
-                    const dateHash = event.date ? new Date(event.date).getDate() : 0;
+                    // Use day + month to avoid same color for different months
+                    let dateHash = 0;
+                    if (event.date) {
+                      const date = new Date(event.date);
+                      dateHash = date.getDate() + date.getMonth() * 31;
+                    }
                     const colors = [
                       { border: '#3498db', bg: '#e8f4f8' }, // Blue
                       { border: '#2ecc71', bg: '#e8f8f0' }, // Green
@@ -92,7 +99,12 @@ function Calendar({ events }) {
                         >
                           <div className="event-time">{timeDisplay}</div>
                           <div className="event-content">
-                            <div className="event-title">{event.title}</div>
+                            <div className="event-title">
+                              {isSchoolHoliday(event.date || event.start) && (
+                                <span className="event-holiday-emoji">🏖️</span>
+                              )}
+                              {event.title}
+                            </div>
                             {event.location && (
                               <div className="event-location">{event.location}</div>
                             )}
@@ -142,6 +154,11 @@ function Calendar({ events }) {
                     );
               })}
             </ul>
+            {isLastSection && (
+              <div className="calendar-end-message">
+                <p>Rien d'autre pour le moment !</p>
+              </div>
+            )}
           </div>
         );
       })}

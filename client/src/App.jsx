@@ -5,7 +5,7 @@ import Calendar from './Calendar';
 // In production, API is served by Express on same domain
 const API_URL = '/api/events';
 
-const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 function App() {
   const [events, setEvents] = useState([]);

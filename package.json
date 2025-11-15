@@ -10,7 +10,8 @@
     "build": "cd client && npm run build",
     "start": "node server/index.js",
     "install:all": "npm install && cd client && npm install",
-    "find-email": "node scripts/find-service-account-email.js"
+        "find-email": "node scripts/find-service-account-email.js",
+        "fetch-events": "node scripts/fetch-events.js"
   },
   "keywords": [
     "calendar",
