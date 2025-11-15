@@ -85,10 +85,10 @@ function Calendar({ events }) {
                         <div 
                           className={`event-item ${isSelected ? 'event-item-selected' : ''}`}
                           onClick={() => setSelectedEvent(isSelected ? null : event.id)}
-                          style={!isSelected ? {
+                          style={{
                             '--event-border-color': colorScheme.border,
                             borderLeftColor: colorScheme.border
-                          } : {}}
+                          }}
                         >
                           <div className="event-time">{timeDisplay}</div>
                           <div className="event-content">
@@ -99,35 +99,43 @@ function Calendar({ events }) {
                           </div>
                         </div>
                         {isSelected && (
-                          <div className="event-details">
-                            <div className="event-details-section">
-                              <div className="event-details-label">Horaires</div>
-                              <div className="event-details-value">
-                                {event.isAllDay ? (
-                                  <span>Toute la journée</span>
-                                ) : event.end ? (
-                                  <span>
-                                    {format(parseISO(event.start), 'HH:mm', { locale: fr })} – {format(parseISO(event.end), 'HH:mm', { locale: fr })}
-                                  </span>
-                                ) : (
-                                  <span>
-                                    {format(parseISO(event.start), 'HH:mm', { locale: fr })}
-                                  </span>
+                          <div className="event-modal-overlay" onClick={() => setSelectedEvent(null)}>
+                            <div className="event-modal" onClick={(e) => e.stopPropagation()}>
+                              <button className="event-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
+                              <div className="event-modal-header">
+                                <h2 className="event-modal-title">{event.title}</h2>
+                              </div>
+                              <div className="event-modal-content">
+                                <div className="event-details-section">
+                                  <div className="event-details-label">Horaires</div>
+                                  <div className="event-details-value">
+                                    {event.isAllDay ? (
+                                      <span>Toute la journée</span>
+                                    ) : event.end ? (
+                                      <span>
+                                        {format(parseISO(event.start), 'HH:mm', { locale: fr })} – {format(parseISO(event.end), 'HH:mm', { locale: fr })}
+                                      </span>
+                                    ) : (
+                                      <span>
+                                        {format(parseISO(event.start), 'HH:mm', { locale: fr })}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {event.description && (
+                                  <div className="event-details-section">
+                                    <div className="event-details-label">Description</div>
+                                    <div className="event-details-value event-description-text">{event.description}</div>
+                                  </div>
+                                )}
+                                {event.location && (
+                                  <div className="event-details-section">
+                                    <div className="event-details-label">Lieu</div>
+                                    <div className="event-details-value">{event.location}</div>
+                                  </div>
                                 )}
                               </div>
                             </div>
-                            {event.description && (
-                              <div className="event-details-section">
-                                <div className="event-details-label">Description</div>
-                                <div className="event-details-value event-description-text">{event.description}</div>
-                              </div>
-                            )}
-                            {event.location && (
-                              <div className="event-details-section">
-                                <div className="event-details-label">Lieu</div>
-                                <div className="event-details-value">{event.location}</div>
-                              </div>
-                            )}
                           </div>
                         )}
                       </li>
