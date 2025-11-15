@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { format, isToday, isTomorrow, parseISO, startOfDay } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { isSchoolHoliday } from './holidays';
+import { CALENDAR_TITLE } from './constants';
+import { getDateTitle } from './utils';
+import { EventItem, formatEventTime } from './EventItem';
 
 function Calendar({ events }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const navigate = useNavigate();
 
   if (!events || events.length === 0) {
     return (
@@ -30,30 +35,13 @@ function Calendar({ events }) {
   // Get date keys sorted
   const sortedDateKeys = Object.keys(eventsByDate).sort();
 
-  // Format date title with first letter capitalized
-  const capitalizeFirst = (str) => {
-    return str.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
-  };
-
-  const getDateTitle = (dateISO) => {
-    const date = parseISO(dateISO);
-    if (isToday(date)) {
-      return 'Aujourd\'hui';
-    } else if (isTomorrow(date)) {
-      return 'Demain';
-    } else {
-      // Format: "Vendredi 15 Novembre 2024"
-      const formatted = format(date, 'EEEE d MMMM yyyy', { locale: fr });
-      return capitalizeFirst(formatted);
-    }
-  };
-
   return (
     <div className="calendar">
       <div className="calendar-header">
-        <h1 className="calendar-main-title">Agenda de la famille Le Guiberre</h1>
+        <div className="calendar-header-left">
+          <button className="back-button" onClick={() => navigate('/')}>← Retour</button>
+        </div>
+        <h1 className="calendar-main-title">{CALENDAR_TITLE}</h1>
         <div className="calendar-legend">
           <div className="calendar-legend-item">
             <div className="calendar-legend-pattern"></div>
@@ -71,51 +59,16 @@ function Calendar({ events }) {
             <h1 className="calendar-title">{dateTitle}</h1>
             <ul className="events-list">
               {dateEvents.map((event) => {
-                // Format time display with start and end
-                let timeDisplay = event.time;
-                if (event.endTime && !event.isAllDay) {
-                  timeDisplay = `${event.time} – ${event.endTime}`;
-                }
-                
-                    const isSelected = selectedEvent === event.id;
-                    
-                    // Generate a color based on event date for visual variety
-                    // Use day + month to avoid same color for different months
-                    let dateHash = 0;
-                    if (event.date) {
-                      const date = new Date(event.date);
-                      dateHash = date.getDate() + date.getMonth() * 31;
-                    }
-                    const colors = [
-                      { border: '#3498db', bg: '#e8f4f8' }, // Blue
-                      { border: '#2ecc71', bg: '#e8f8f0' }, // Green
-                      { border: '#e74c3c', bg: '#fdeaea' }, // Red
-                      { border: '#f39c12', bg: '#fef5e7' }, // Orange
-                      { border: '#9b59b6', bg: '#f4ecf7' }, // Purple
-                      { border: '#1abc9c', bg: '#e8f8f5' }, // Turquoise
-                    ];
-                    const colorScheme = colors[dateHash % colors.length];
+                const isSelected = selectedEvent === event.id;
                     
                     return (
                       <li key={event.id}>
-                        <div 
-                          className={`event-item ${isSelected ? 'event-item-selected' : ''} ${isSchoolHoliday(event.date || event.start) ? 'event-holiday' : ''}`}
+                        <EventItem 
+                          event={event} 
+                          compact={false}
+                          isSelected={isSelected}
                           onClick={() => setSelectedEvent(isSelected ? null : event.id)}
-                          style={{
-                            '--event-border-color': colorScheme.border,
-                            borderLeftColor: colorScheme.border
-                          }}
-                        >
-                          <div className="event-time">{timeDisplay}</div>
-                          <div className="event-content">
-                            <div className="event-title">
-                              {event.title}
-                            </div>
-                            {event.location && (
-                              <div className="event-location">{event.location}</div>
-                            )}
-                          </div>
-                        </div>
+                        />
                         {isSelected && (
                           <div className="event-modal-overlay" onClick={() => setSelectedEvent(null)}>
                             <div className="event-modal" onClick={(e) => e.stopPropagation()}>

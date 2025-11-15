@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Calendar from './Calendar';
+import Home from './Home';
 
-// Use Vite proxy in development (works from network too)
-// In production, API is served by Express on same domain
-const API_URL = '/api/events';
+import { API_URL, REFRESH_INTERVAL } from './constants';
 
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-function App() {
+function CalendarPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const appRef = useRef(null);
+  const navigate = useNavigate();
 
   // Enable drag-to-scroll - simplified approach
   useEffect(() => {
@@ -113,6 +112,17 @@ function App() {
     <div className="app" ref={appRef}>
       <Calendar events={events} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+      </Routes>
+    </Router>
   );
 }
 
