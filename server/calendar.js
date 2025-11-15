@@ -137,11 +137,19 @@ class CalendarService {
         // Check if event spans multiple days
         const startDay = startOfDay(startInParis);
         const endDay = startOfDay(endInParis);
-        const spansMultipleDays = !isSameDay(startInParis, endInParis);
+        
+        // For all-day events, Google Calendar sets end date to the day AFTER the event ends
+        // So we need to subtract 1 day from the end date for all-day events
+        let actualEndDay = endDay;
+        if (isAllDay) {
+          actualEndDay = addDays(endDay, -1);
+        }
+        
+        const spansMultipleDays = !isSameDay(startDay, actualEndDay);
 
         // If event spans multiple days, create entries for each day
         if (spansMultipleDays) {
-          const days = eachDayOfInterval({ start: startDay, end: endDay });
+          const days = eachDayOfInterval({ start: startDay, end: actualEndDay });
           return days.map((day, index) => {
             let dayTimeDisplay;
             let dayEndTimeDisplay = null;

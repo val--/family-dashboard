@@ -52,6 +52,15 @@ function Calendar({ events }) {
 
   return (
     <div className="calendar">
+      <div className="calendar-header">
+        <h1 className="calendar-main-title">Agenda de la famille Le Guiberre</h1>
+        <div className="calendar-legend">
+          <div className="calendar-legend-item">
+            <div className="calendar-legend-pattern"></div>
+            <span className="calendar-legend-text">Vacances scolaires</span>
+          </div>
+        </div>
+      </div>
       {sortedDateKeys.map((dateKey, dateIndex) => {
         const dateEvents = eventsByDate[dateKey];
         const dateTitle = getDateTitle(dateKey);
@@ -90,7 +99,7 @@ function Calendar({ events }) {
                     return (
                       <li key={event.id}>
                         <div 
-                          className={`event-item ${isSelected ? 'event-item-selected' : ''}`}
+                          className={`event-item ${isSelected ? 'event-item-selected' : ''} ${isSchoolHoliday(event.date || event.start) ? 'event-holiday' : ''}`}
                           onClick={() => setSelectedEvent(isSelected ? null : event.id)}
                           style={{
                             '--event-border-color': colorScheme.border,
@@ -100,9 +109,6 @@ function Calendar({ events }) {
                           <div className="event-time">{timeDisplay}</div>
                           <div className="event-content">
                             <div className="event-title">
-                              {isSchoolHoliday(event.date || event.start) && (
-                                <span className="event-holiday-emoji">🏖️</span>
-                              )}
                               {event.title}
                             </div>
                             {event.location && (
@@ -144,6 +150,12 @@ function Calendar({ events }) {
                                   <div className="event-details-section">
                                     <div className="event-details-label">Lieu</div>
                                     <div className="event-details-value">{event.location}</div>
+                                  </div>
+                                )}
+                                {isSchoolHoliday(event.date || event.start) && (
+                                  <div className="event-details-section event-details-notes">
+                                    <div className="event-details-label">Notes</div>
+                                    <div className="event-details-value">Pendant les vacances scolaires !</div>
                                   </div>
                                 )}
                               </div>
