@@ -74,5 +74,28 @@ Edit `server/config.js`:
 3. Place `credentials/service-account.json` on the Pi
 4. Run `npm run install:all && npm run build`
 5. Start with PM2: `pm2 start server/index.js --name family-dashboard`
-6. Configure browser in kiosk mode
+6. Configure browser in kiosk mode with touch support
+
+### Browser Setup for Touch Support
+
+**Option 1: Using Chromium (recommended)**
+```bash
+# Install Chromium if not already installed
+sudo apt-get update
+sudo apt-get install chromium
+
+# Start in kiosk mode with touch support
+./scripts/start-browser-pi.sh http://localhost:5000
+```
+
+**Option 2: Manual Chromium launch**
+```bash
+chromium --kiosk --touch-events=enabled --enable-touch-drag-drop http://localhost:5000
+```
+
+**Option 3: Auto-start on boot**
+Add to `/etc/xdg/lxsession/LXDE-pi/autostart`:
+```
+@chromium --kiosk --touch-events=enabled --enable-touch-drag-drop http://localhost:5000
+```
 

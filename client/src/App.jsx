@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Calendar from './Calendar';
 
-const API_URL = import.meta.env.PROD 
-  ? '/api/events' 
-  : 'http://localhost:5000/api/events';
+// Use Vite proxy in development (works from network too)
+// In production, API is served by Express on same domain
+const API_URL = '/api/events';
 
 const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
@@ -11,6 +11,53 @@ function App() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const appRef = useRef(null);
+
+  // Enable drag-to-scroll - simplified approach
+  useEffect(() => {
+    const container = appRef.current;
+    if (!container) return;
+
+    // Only handle mouse drag, let native touch scrolling work
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    const onMouseDown = (e) => {
+      if (e.target.closest('a, button, .event-item')) return;
+      isDragging = true;
+      startY = e.clientY;
+      startScrollTop = container.scrollTop;
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const deltaY = e.clientY - startY;
+      container.scrollTop = startScrollTop - deltaY;
+      e.preventDefault();
+    };
+
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        container.style.cursor = '';
+        container.style.userSelect = '';
+      }
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   const fetchEvents = async () => {
     try {
@@ -63,7 +110,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" ref={appRef}>
       <Calendar events={events} />
     </div>
   );

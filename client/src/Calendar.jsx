@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format, isToday, isTomorrow, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 function Calendar({ events }) {
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
   if (!events || events.length === 0) {
     return (
       <div className="calendar">
@@ -64,17 +66,56 @@ function Calendar({ events }) {
                   timeDisplay = `${event.time} – ${event.endTime}`;
                 }
                 
-                return (
-                  <li key={event.id} className="event-item">
-                    <div className="event-time">{timeDisplay}</div>
-                    <div className="event-content">
-                      <div className="event-title">{event.title}</div>
-                      {event.location && (
-                        <div className="event-location">{event.location}</div>
-                      )}
-                    </div>
-                  </li>
-                );
+                    const isSelected = selectedEvent === event.id;
+                    
+                    return (
+                      <li key={event.id}>
+                        <div 
+                          className={`event-item ${isSelected ? 'event-item-selected' : ''}`}
+                          onClick={() => setSelectedEvent(isSelected ? null : event.id)}
+                        >
+                          <div className="event-time">{timeDisplay}</div>
+                          <div className="event-content">
+                            <div className="event-title">{event.title}</div>
+                            {event.location && (
+                              <div className="event-location">{event.location}</div>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div className="event-details">
+                            <div className="event-details-section">
+                              <div className="event-details-label">Horaires</div>
+                              <div className="event-details-value">
+                                {event.isAllDay ? (
+                                  <span>Toute la journée</span>
+                                ) : event.end ? (
+                                  <span>
+                                    {format(parseISO(event.start), 'HH:mm', { locale: fr })} – {format(parseISO(event.end), 'HH:mm', { locale: fr })}
+                                  </span>
+                                ) : (
+                                  <span>
+                                    {format(parseISO(event.start), 'HH:mm', { locale: fr })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {event.description && (
+                              <div className="event-details-section">
+                                <div className="event-details-label">Description</div>
+                                <div className="event-details-value event-description-text">{event.description}</div>
+                              </div>
+                            )}
+                            {event.location && (
+                              <div className="event-details-section">
+                                <div className="event-details-label">Lieu</div>
+                                <div className="event-details-value">{event.location}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
               })}
             </ul>
           </div>

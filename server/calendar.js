@@ -168,29 +168,33 @@ class CalendarService {
               dayIsAllDay = true;
             }
 
-            return {
-              id: `${event.id}_${index}`,
-              title: event.summary || 'Sans titre',
-              time: dayTimeDisplay,
-              endTime: dayEndTimeDisplay,
-              location: event.location || null,
-              start: startInParis.toISOString(),
-              date: day.toISOString(),
-              isAllDay: dayIsAllDay
-            };
+                return {
+                  id: `${event.id}_${index}`,
+                  title: event.summary || 'Sans titre',
+                  time: dayTimeDisplay,
+                  endTime: dayEndTimeDisplay,
+                  location: event.location || null,
+                  description: event.description || null,
+                  start: startInParis.toISOString(),
+                  end: endInParis.toISOString(),
+                  date: day.toISOString(),
+                  isAllDay: dayIsAllDay
+                };
           });
         } else {
-          // Single day event
-          return {
-            id: event.id,
-            title: event.summary || 'Sans titre',
-            time: timeDisplay,
-            endTime: endTimeDisplay,
-            location: event.location || null,
-            start: startInParis.toISOString(),
-            date: startDay.toISOString(),
-            isAllDay
-          };
+              // Single day event
+              return {
+                id: event.id,
+                title: event.summary || 'Sans titre',
+                time: timeDisplay,
+                endTime: endTimeDisplay,
+                location: event.location || null,
+                description: event.description || null,
+                start: startInParis.toISOString(),
+                end: endInParis.toISOString(),
+                date: startDay.toISOString(),
+                isAllDay
+              };
         }
       })
       .flat() // Flatten array of arrays from multi-day events

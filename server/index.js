@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? false // In production, static files are served by Express, no CORS needed
-    : 'http://localhost:3000', // Allow requests from Vite dev server
+    : true, // Allow requests from any origin in development (for network access)
   credentials: true
 }));
 app.use(express.json());
@@ -45,8 +45,9 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Accessible on network at: http://<your-ip>:${PORT}`);
 });
 
