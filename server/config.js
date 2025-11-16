@@ -23,5 +23,9 @@ module.exports = {
     language: process.env.NEWS_LANGUAGE || 'fr', // Language code (fr = French) - only used with /everything endpoint
     useEverything: process.env.NEWS_USE_EVERYTHING !== 'false', // Use /everything endpoint by default (true) to ensure French language filtering
     pageSize: parseInt(process.env.NEWS_PAGE_SIZE || '20', 10)
+  },
+  bus: {
+    stopId: process.env.BUS_STOP_ID || 'LHOU', // Code de l'arrêt (ex: LHOU pour "La Houssais" à Rezé)
+    stopName: process.env.BUS_STOP_NAME || 'La Houssais' // Nom de l'arrêt (optionnel, pour affichage)
   }
 };

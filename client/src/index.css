@@ -1899,6 +1899,337 @@ body {
   font-size: 14px;
 }
 
+.bus-departures-header {
+  font-size: 12px;
+  color: #6c757d;
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.bus-departures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bus-line-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bus-departure-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.bus-departure-item:hover {
+  background: #e9ecef;
+}
+
+.bus-line-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+  flex-shrink: 0;
+}
+
+.bus-line-number.bus-line-30 {
+  background: #ffd700;
+  color: #2c3e50;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bus-departure-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Styles pour l'ancienne structure (gardés pour compatibilité) */
+.bus-departure {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.bus-departure:hover {
+  background: #e9ecef;
+}
+
+.bus-departure-line {
+  flex-shrink: 0;
+}
+
+.bus-departure-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bus-departure-direction {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bus-departure-time {
+  font-size: 13px;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bus-realtime-indicator {
+  color: #27ae60;
+  font-size: 10px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.bus-widget-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e9ecef;
+  font-size: 11px;
+  color: #868e96;
+  text-align: center;
+}
+
+.bus-widget-clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bus-widget-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.bus-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+.bus-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+.bus-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 2px solid #3498db;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.bus-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.bus-modal-close {
+  background: none;
+  border: none;
+  font-size: 36px;
+  color: #868e96;
+  cursor: pointer;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.bus-modal-close:hover {
+  background: #f1f3f5;
+  color: #212529;
+}
+
+.bus-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  min-height: 0;
+}
+
+.bus-modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.bus-modal-stop-info {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #3498db;
+}
+
+.bus-modal-stop-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #495057;
+}
+
+.bus-modal-stop-info strong {
+  color: #2c3e50;
+  margin-right: 8px;
+}
+
+.bus-modal-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bus-modal-direction-group {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.bus-modal-direction-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.bus-modal-departures-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.bus-modal-departure-detail {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.bus-modal-departure-time-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.bus-modal-time-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.bus-modal-platform {
+  font-size: 11px;
+  color: #6c757d;
+  margin-top: 4px;
+}
+
+.bus-modal-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .bus-modal {
+    max-width: 100%;
+    max-height: 95vh;
+    margin: 10px;
+  }
+
+  .bus-modal-header {
+    padding: 16px 20px;
+  }
+
+  .bus-modal-title {
+    font-size: 18px;
+  }
+
+  .bus-modal-iframe {
+    min-height: 400px;
+  }
+}
+
 .news-ticker-indicator {
   padding: 0 20px;
   font-size: 11px;

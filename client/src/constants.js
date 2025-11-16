@@ -1,9 +1,10 @@
 // Calendar title used across the application
-export const CALENDAR_TITLE = 'Agenda de la famille Le Guiberre';
+export const CALENDAR_TITLE = '📅 Agenda de la famille Le Guiberre';
 
 // API configuration
 export const API_URL = '/api/events';
 export const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+export const BUS_REFRESH_INTERVAL = 1 * 60 * 1000; // 1 minute for bus (more frequent updates needed)
 
 // Maximum number of events to display
 export const MAX_EVENTS_WIDGET = 10; // Maximum events in the widget

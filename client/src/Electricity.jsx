@@ -11,7 +11,7 @@ function Electricity({ data, loading, error }) {
         <div className="electricity-page-header-left">
           <button className="back-button" onClick={() => navigate('/')}>← Retour</button>
         </div>
-        <h1 className="electricity-page-main-title">Consommation Électrique</h1>
+        <h1 className="electricity-page-main-title">⚡ Consommation Électrique</h1>
         <div className="electricity-page-header-right"></div>
       </div>
       <div className="electricity-page-content">

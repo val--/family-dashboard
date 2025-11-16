@@ -13,7 +13,8 @@
     "find-email": "node scripts/find-service-account-email.js",
     "fetch-events": "node scripts/fetch-events.js",
     "fetch-electricity": "node scripts/fetch-electricity.js",
-    "fetch-news": "node scripts/fetch-news.js"
+    "fetch-news": "node scripts/fetch-news.js",
+    "find-bus-stop": "node scripts/find-bus-stop.js"
   },
   "keywords": [
     "calendar",
