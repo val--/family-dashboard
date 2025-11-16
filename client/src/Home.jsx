@@ -3,6 +3,7 @@ import CalendarWidget from './CalendarWidget';
 import ElectricityWidget from './ElectricityWidget';
 import WeatherWidget from './WeatherWidget';
 import NewsTicker from './NewsTicker';
+import BusWidget from './BusWidget';
 import { API_URL, REFRESH_INTERVAL, MAX_EVENTS_WIDGET } from './constants';
 
 function Home() {
@@ -80,12 +81,17 @@ function Home() {
           <CalendarWidget events={events} loading={loading} error={error} />
         </div>
         <div className="home-right">
-          <ElectricityWidget 
-            data={electricityData} 
-            loading={electricityLoading} 
-            error={electricityError}
-            compact={true}
-          />
+          <div className="home-right-top">
+            <ElectricityWidget 
+              data={electricityData} 
+              loading={electricityLoading} 
+              error={electricityError}
+              compact={true}
+            />
+          </div>
+          <div className="home-right-bottom">
+            <BusWidget />
+          </div>
         </div>
       </div>
       <NewsTicker />

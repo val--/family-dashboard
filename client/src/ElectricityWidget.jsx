@@ -60,6 +60,56 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
     });
   };
 
+  // In compact mode, only show the 7-day chart
+  if (compact) {
+    // Limit dailyChartData to last 7 days
+    const chartData = data.dailyChartData && data.dailyChartData.length > 0 
+      ? data.dailyChartData.slice(-7) 
+      : [];
+
+    return (
+      <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
+        <div className="electricity-widget-header">
+          <h2 className="electricity-widget-title">Consommation Électrique</h2>
+        </div>
+        <div className="electricity-widget-content">
+          {chartData.length > 0 ? (
+            <div className="electricity-stat-card electricity-stat-chart">
+              <div className="electricity-stat-label">Évolution sur 7 jours</div>
+              <div className="electricity-chart">
+                {chartData.map((day, index) => {
+                  const maxValue = Math.max(...chartData.map(d => d.value), 1);
+                  const height = maxValue > 0 ? (day.value / maxValue) * 100 : 0;
+                  const isToday = index === chartData.length - 1;
+                  
+                  return (
+                    <div key={day.date} className="electricity-chart-bar-container">
+                      <div className="electricity-chart-bar-wrapper">
+                        <div 
+                          className={`electricity-chart-bar ${isToday ? 'electricity-chart-bar-today' : ''}`}
+                          style={{ height: `${height}%` }}
+                          title={isToday ? `${day.dateLabel}: à venir` : `${day.dateLabel}: ${formatValue(day.value)} kWh`}
+                        >
+                          <span className="electricity-chart-bar-value">
+                            {isToday ? 'à venir' : (day.value > 0 ? formatValue(day.value) : '')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="electricity-chart-label">{day.dateLabel}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="electricity-widget-empty">Aucune donnée disponible</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full mode: show all stats
   return (
     <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
       <div className="electricity-widget-header">
@@ -91,34 +141,32 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
             )}
           </div>
 
-          {!compact && (
-            <div className="electricity-stat-card electricity-stat-week">
-              <div className="electricity-stat-label">7 derniers jours</div>
-              <div className="electricity-stat-value">
-                {formatValue(data.weekTotal)} <span className="electricity-stat-unit">kWh</span>
-              </div>
-              <div className="electricity-stat-subvalue">
-                Moyenne: {formatValue(data.weekAverage)} kWh/jour
-              </div>
-              {data.previousWeekTotal > 0 && (
-                <div className="electricity-stat-comparison">
-                  {data.weekTotal < data.previousWeekTotal ? (
-                    <>
-                      <span className="electricity-stat-comparison-better">↓</span> Consommation en baisse par rapport à la semaine précédente ({Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh de moins)
-                    </>
-                  ) : data.weekTotal > data.previousWeekTotal ? (
-                    <>
-                      <span className="electricity-stat-comparison-worse">↑</span> Consommation en hausse par rapport à la semaine précédente (+{Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh)
-                    </>
-                  ) : (
-                    <>
-                      <span className="electricity-stat-comparison-same">→</span> Consommation identique à la semaine précédente
-                    </>
-                  )}
-                </div>
-              )}
+          <div className="electricity-stat-card electricity-stat-week">
+            <div className="electricity-stat-label">7 derniers jours</div>
+            <div className="electricity-stat-value">
+              {formatValue(data.weekTotal)} <span className="electricity-stat-unit">kWh</span>
             </div>
-          )}
+            <div className="electricity-stat-subvalue">
+              Moyenne: {formatValue(data.weekAverage)} kWh/jour
+            </div>
+            {data.previousWeekTotal > 0 && (
+              <div className="electricity-stat-comparison">
+                {data.weekTotal < data.previousWeekTotal ? (
+                  <>
+                    <span className="electricity-stat-comparison-better">↓</span> Consommation en baisse par rapport à la semaine précédente ({Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh de moins)
+                  </>
+                ) : data.weekTotal > data.previousWeekTotal ? (
+                  <>
+                    <span className="electricity-stat-comparison-worse">↑</span> Consommation en hausse par rapport à la semaine précédente (+{Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh)
+                  </>
+                ) : (
+                  <>
+                    <span className="electricity-stat-comparison-same">→</span> Consommation identique à la semaine précédente
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           {data.contractInfo && (
             <div className="electricity-stat-card electricity-stat-power">
@@ -136,9 +184,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
 
           {data.dailyChartData && data.dailyChartData.length > 0 && (
             <div className="electricity-stat-card electricity-stat-chart">
-              <div className="electricity-stat-label">
-                {compact ? 'Évolution sur 7 jours' : 'Évolution sur 15 jours'}
-              </div>
+              <div className="electricity-stat-label">Évolution sur {data.dailyChartData.length} jours</div>
               <div className="electricity-chart">
                 {data.dailyChartData.map((day, index) => {
                   const maxValue = Math.max(...data.dailyChartData.map(d => d.value), 1);
@@ -166,7 +212,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
             </div>
           )}
 
-          {!compact && data.monthlyChartData && data.monthlyChartData.length > 0 && (
+          {data.monthlyChartData && data.monthlyChartData.length > 0 && (
             <div className="electricity-stat-card electricity-stat-chart electricity-stat-chart-monthly">
               <div className="electricity-stat-label">Évolution sur 12 derniers mois</div>
               <div className="electricity-chart electricity-chart-monthly">

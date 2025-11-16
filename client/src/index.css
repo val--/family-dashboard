@@ -95,9 +95,10 @@ body {
   flex: 0 0 50%;
   width: 50%;
   padding: 20px 10px 20px 20px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
+  min-height: 0;
 }
 
 .home-right {
@@ -105,9 +106,27 @@ body {
   width: 50%;
   padding: 20px 20px 20px 10px;
   display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.home-right-top {
+  flex: 1 1 50%;
+  display: flex;
   align-items: stretch;
   justify-content: stretch;
-  box-sizing: border-box;
+  min-height: 0;
+}
+
+.home-right-bottom {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  min-height: 0;
 }
 
 .home-placeholder {
@@ -306,6 +325,7 @@ body {
   justify-content: center;
   position: relative;
   min-height: 80px;
+  padding-top: 24px; /* Space for horizontal values above bars */
 }
 
 .electricity-chart-bar {
@@ -338,14 +358,12 @@ body {
   font-weight: 600;
   color: #2c3e50;
   white-space: nowrap;
-  transform: rotate(-90deg);
-  transform-origin: center;
   position: absolute;
-  top: 50%;
+  top: -20px;
   left: 50%;
-  margin-left: -15px;
-  margin-top: -6px;
+  transform: translateX(-50%);
   opacity: 0.8;
+  text-align: center;
 }
 
 .electricity-chart-bar-today .electricity-chart-bar-value {
@@ -422,6 +440,8 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  min-height: 0;
+  flex: 1;
 }
 
 .calendar-widget:hover {
@@ -1809,6 +1829,74 @@ body {
 .news-ticker-type-option.active {
   background: rgba(255, 255, 255, 0.2);
   color: #ffd700;
+}
+
+/* Bus Widget Styles */
+.bus-widget {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 0;
+  flex: 1;
+}
+
+.bus-widget:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.bus-widget-header {
+  padding: 16px 20px;
+  border-bottom: 2px solid #3498db;
+  position: relative;
+}
+
+.bus-widget-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(to right, #3498db, #2980b9);
+}
+
+.bus-widget-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.bus-widget-content {
+  padding: 16px 20px;
+  flex: 1;
+  overflow-y: auto;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bus-widget-content::-webkit-scrollbar {
+  display: none;
+}
+
+.bus-widget-loading,
+.bus-widget-error,
+.bus-widget-empty,
+.bus-widget-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-size: 14px;
 }
 
 .news-ticker-indicator {

@@ -11,6 +11,7 @@ class ElectricityService {
     this.token = config.myElectricalData.token;
     this.cache = null;
     this.cacheTimestamp = null;
+    this.cacheDailyChartDays = null; // Track which dailyChartDays was cached
     this.CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
     this.last409ErrorLogTime = 0;
     this.ERROR_LOG_INTERVAL = 5 * 60 * 1000; // Log 409 errors at most once every 5 minutes
@@ -225,14 +226,14 @@ class ElectricityService {
    * @param {number} dailyChartDays - Number of days to include in daily chart (default: 7)
    */
   async getWidgetData(dailyChartDays = 7) {
-    // Check cache first
-    if (this.cache && this.cacheTimestamp && Date.now() - this.cacheTimestamp < this.CACHE_DURATION) {
+    // Check cache first - only use cache if it matches the requested dailyChartDays
+    if (this.cache && this.cacheTimestamp && this.cacheDailyChartDays === dailyChartDays && Date.now() - this.cacheTimestamp < this.CACHE_DURATION) {
       const cacheAge = Math.round((Date.now() - this.cacheTimestamp) / 1000);
-      console.log(`[Électricité] ✅ Données récupérées depuis le cache serveur (âge: ${cacheAge}s)`);
+      console.log(`[Électricité] ✅ Données récupérées depuis le cache serveur (âge: ${cacheAge}s, ${dailyChartDays} jours)`);
       return this.cache;
     }
     
-    console.log(`[Électricité] 🔄 Appel API réel - cache serveur expiré ou inexistant`);
+    console.log(`[Électricité] 🔄 Appel API réel - cache serveur expiré ou inexistant (demandé: ${dailyChartDays} jours, cache: ${this.cacheDailyChartDays || 'aucun'} jours)`);
 
     try {
       const timezone = config.timezone;
@@ -326,11 +327,16 @@ class ElectricityService {
           todayConsumption = parseFloat(rawValue) / conversionFactor;
         }
 
-        // Calculate week total
+        // Calculate week total (only last 7 days, regardless of dailyChartDays)
+        const weekStartDate = format(subDays(startOfToday, 7), 'yyyy-MM-dd');
         readings.forEach(reading => {
-          const value = reading.value || reading.Value || reading.energy || reading.Energy;
-          if (value !== undefined && value !== null) {
-            weekTotal += parseFloat(value) / conversionFactor;
+          const readingDate = reading.date || reading.Date || reading.start || reading.Start;
+          // Only include readings from the last 7 days (excluding today)
+          if (readingDate && (readingDate >= weekStartDate && readingDate < today)) {
+            const value = reading.value || reading.Value || reading.energy || reading.Energy;
+            if (value !== undefined && value !== null) {
+              weekTotal += parseFloat(value) / conversionFactor;
+            }
           }
         });
 
@@ -517,7 +523,8 @@ class ElectricityService {
       // Update cache
       this.cache = result;
       this.cacheTimestamp = Date.now();
-      console.log(`[Électricité] 💾 Données mises en cache serveur (durée: ${this.CACHE_DURATION / 1000 / 60} minutes)`);
+      this.cacheDailyChartDays = dailyChartDays;
+      console.log(`[Électricité] 💾 Données mises en cache serveur (durée: ${this.CACHE_DURATION / 1000 / 60} minutes, ${dailyChartDays} jours)`);
 
       return result;
     } catch (error) {

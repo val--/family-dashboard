@@ -8,6 +8,7 @@ const calendarService = require('./calendar');
 const electricityService = require('./electricity');
 const weatherService = require('./weather');
 const newsService = require('./news');
+const busService = require('./bus');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -78,6 +79,21 @@ app.get('/api/news', async (req, res) => {
     console.error('Error in /api/news:', error);
     res.status(500).json({ 
       error: 'Failed to fetch news data', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+// Bus API route
+app.get('/api/bus', async (req, res) => {
+  try {
+    const data = await busService.getBusData();
+    res.json({ data, success: true });
+  } catch (error) {
+    console.error('Error in /api/bus:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch bus data', 
       message: error.message,
       success: false 
     });
