@@ -108,30 +108,13 @@ async function testNewsAPI() {
   try {
     let url;
     
-    if (NEWS_USE_EVERYTHING) {
-      // Use /everything endpoint which supports language parameter
-      // Note: /everything requires at least one of: q, qInTitle, sources, or domains
-      // We'll use a broad search query to get French news
-      console.log('🚀 Démarrage du test avec endpoint /everything (filtre langue)...\n');
-      
-      // Build query - use a very broad search term to get all news in French
-      // Using "France" as a search term ensures we get French news
-      let searchQuery = 'France';
-      if (NEWS_CATEGORY) {
-        searchQuery = `${NEWS_CATEGORY} France`;
-      }
-      
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(searchQuery)}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
-    } else {
-      // Use /top-headlines endpoint (default)
-      // Note: The 'language' parameter is not supported by top-headlines endpoint
-      // Use 'country' parameter instead (fr = France will return French news)
-      console.log('🚀 Démarrage du test avec endpoint /top-headlines (par pays)...\n');
-      url = `https://newsapi.org/v2/top-headlines?country=${NEWS_COUNTRY}&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
-      if (NEWS_CATEGORY) {
-        url += `&category=${NEWS_CATEGORY}`;
-      }
-    }
+    // Test avec /top-headlines pour France
+    console.log('🚀 Démarrage du test avec endpoint /top-headlines (country=fr)...\n');
+    url = `https://newsapi.org/v2/top-headlines?country=fr&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
+    
+    // Alternative: test avec /everything
+    // console.log('🚀 Démarrage du test avec endpoint /everything (filtre langue)...\n');
+    // url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
     
     const newsData = await makeRequest(url);
 

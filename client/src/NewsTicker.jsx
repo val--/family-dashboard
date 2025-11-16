@@ -141,8 +141,25 @@ function NewsTicker() {
     );
   }
 
+  const handlePlayPause = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsPaused(!isPaused);
+    if (!isPaused) {
+      // If pausing, don't show modal, just pause
+      setSelectedArticle(null);
+    } else {
+      // If resuming, clear selected article
+      setSelectedArticle(null);
+    }
+  };
+
   // Handle click/touch to pause and show modal
   const handleTickerClick = (e) => {
+    // Don't pause if clicking on controls
+    if (e.target.closest('.news-ticker-controls')) {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     
@@ -335,6 +352,21 @@ function NewsTicker() {
               {allNewsItems}
             </div>
           </div>
+        </div>
+        <div className="news-ticker-controls" onClick={(e) => e.stopPropagation()}>
+          <button
+            className="news-ticker-control-btn"
+            onClick={handlePlayPause}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handlePlayPause(e);
+            }}
+            title={isPaused ? 'Reprendre' : 'Pause'}
+            aria-label={isPaused ? 'Reprendre' : 'Pause'}
+          >
+            {isPaused ? '▶️' : '⏸️'}
+          </button>
         </div>
       </div>
 

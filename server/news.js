@@ -83,9 +83,12 @@ async function getNewsData(newsType = 'france') {
     let url;
     
     if (newsType === 'france') {
-      // France news - use /everything with France search
-      console.log(`[News] 📡 Appel API: everything (France, language: ${NEWS_LANGUAGE})`);
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
+      // France news - use /everything with specific French sources and France-related keywords
+      // Search for news from French sources or about France (national news)
+      console.log(`[News] 📡 Appel API: everything (France - actualités nationales, language: ${NEWS_LANGUAGE})`);
+      // Use a more specific query to get French national news: search for France-related terms
+      // and filter by French language to get news from/about France
+      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France OR français OR Paris OR gouvernement français OR politique française')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
     } else if (newsType === 'monde') {
       // World news - use /everything with broader search, in English
       // Use multiple search terms to get international news, excluding France-specific news
@@ -99,9 +102,9 @@ async function getNewsData(newsType = 'france') {
       console.log(`[News] 📡 Appel API: everything (Tech, language: en)`);
       url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('technology tech')}&language=en&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
     } else {
-      // Fallback to France
-      console.log(`[News] 📡 Appel API: everything (France, language: ${NEWS_LANGUAGE})`);
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
+      // Fallback to France - use /everything with France search
+      console.log(`[News] 📡 Appel API: everything (France - actualités nationales, language: ${NEWS_LANGUAGE})`);
+      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France OR français OR Paris OR gouvernement français OR politique française')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
     }
     
     console.log(`[News] 🔗 URL appelée: ${url}`);
@@ -115,7 +118,8 @@ async function getNewsData(newsType = 'france') {
     });
 
     if (newsData.status !== 'ok') {
-      throw new Error('News API returned invalid status');
+      console.error(`[News] ❌ Statut API invalide:`, newsData);
+      throw new Error(`News API returned invalid status: ${newsData.status}${newsData.message ? ` - ${newsData.message}` : ''}`);
     }
 
     // Process articles
@@ -131,6 +135,10 @@ async function getNewsData(newsType = 'france') {
       // Remove [Removed] or [Source] patterns that NewsAPI sometimes adds
       cleanTitle: (article.title || '').replace(/\s*\[.*?\]\s*/g, '').trim() || 'Sans titre',
     })).filter((article) => article.cleanTitle !== 'Sans titre' && article.cleanTitle.length > 0);
+
+    if (articles.length === 0) {
+      console.warn(`[News] ⚠️  Aucun article valide après traitement (${newsData.articles?.length || 0} articles bruts reçus)`);
+    }
 
     const result = {
       articles,
