@@ -141,25 +141,52 @@ function NewsTicker() {
     );
   }
 
-  const handlePlayPause = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsPaused(!isPaused);
-    if (!isPaused) {
-      // If pausing, don't show modal, just pause
-      setSelectedArticle(null);
-    } else {
-      // If resuming, clear selected article
-      setSelectedArticle(null);
+  // Helper function to find article at a specific X position
+  const findArticleAtPosition = (x, scrollContainer, scrollText, articles) => {
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const searchX = x !== null ? x : containerRect.left + containerRect.width / 2;
+    
+    // Find all article wrappers
+    const articleWrappers = scrollText.querySelectorAll('.news-ticker-item-wrapper');
+    
+    // Find the article that contains or is closest to the search position
+    let closestArticle = null;
+    let closestDistance = Infinity;
+    
+    articleWrappers.forEach((wrapper) => {
+      const wrapperRect = wrapper.getBoundingClientRect();
+      
+      // Check if the click/search position is within this wrapper
+      if (searchX >= wrapperRect.left && searchX <= wrapperRect.right) {
+        // This wrapper contains the position, use it
+        closestArticle = wrapper;
+        closestDistance = 0;
+      } else {
+        // Calculate distance to this wrapper
+        const wrapperCenterX = wrapperRect.left + wrapperRect.width / 2;
+        const distance = Math.abs(wrapperCenterX - searchX);
+        
+        // Only consider wrappers that are at least partially visible
+        if (wrapperRect.right > containerRect.left && wrapperRect.left < containerRect.right) {
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestArticle = wrapper;
+          }
+        }
+      }
+    });
+    
+    if (closestArticle) {
+      const articleIndex = parseInt(closestArticle.getAttribute('data-article-index'), 10);
+      if (!isNaN(articleIndex) && articleIndex >= 0 && articleIndex < articles.length) {
+        return articles[articleIndex];
+      }
     }
+    return articles.length > 0 ? articles[0] : null;
   };
 
   // Handle click/touch to pause and show modal
   const handleTickerClick = (e) => {
-    // Don't pause if clicking on controls
-    if (e.target.closest('.news-ticker-controls')) {
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
     
@@ -175,41 +202,65 @@ function NewsTicker() {
       // Pause and find which article is currently visible
       setIsPaused(true);
       
-      // Calculate which article is visible based on animation progress
+      // Find which article is visible by checking DOM elements at click position
       const scrollContainer = scrollContainerRef.current;
-      if (scrollContainer) {
+      if (scrollContainer && newsData && newsData.articles && newsData.articles.length > 0) {
         const scrollText = scrollContainer.querySelector('.news-ticker-scrolling-text');
         if (scrollText) {
-          // Get the transform value to calculate current position
-          const style = window.getComputedStyle(scrollText);
-          const transform = style.transform;
+          // Use the click coordinates to find the exact article clicked
+          const clickX = e.clientX || (e.touches && e.touches[0]?.clientX) || (e.changedTouches && e.changedTouches[0]?.clientX);
+          const clickY = e.clientY || (e.touches && e.touches[0]?.clientY) || (e.changedTouches && e.changedTouches[0]?.clientY);
           
-          // Extract translateX value from transform matrix
-          let translateX = 0;
-          if (transform && transform !== 'none') {
-            const matrix = transform.match(/matrix\(([^)]+)\)/);
-            if (matrix) {
-              translateX = parseFloat(matrix[1].split(',')[4]) || 0;
+          let selectedArticle = null;
+          
+          if (clickX !== undefined && clickY !== undefined) {
+            // Find the element at the click position
+            const elementAtPoint = document.elementFromPoint(clickX, clickY);
+            
+            // Traverse up the DOM tree to find the article wrapper
+            let articleWrapper = elementAtPoint;
+            while (articleWrapper && !articleWrapper.classList.contains('news-ticker-item-wrapper')) {
+              articleWrapper = articleWrapper.parentElement;
             }
+            
+            if (articleWrapper && articleWrapper.classList.contains('news-ticker-item-wrapper')) {
+              const articleIndex = parseInt(articleWrapper.getAttribute('data-article-index'), 10);
+              if (!isNaN(articleIndex) && articleIndex >= 0 && articleIndex < newsData.articles.length) {
+                selectedArticle = newsData.articles[articleIndex];
+              }
+            }
+            
+            // If we didn't find an article by traversing, use position-based search
+            if (!selectedArticle) {
+              selectedArticle = findArticleAtPosition(clickX, scrollContainer, scrollText, newsData.articles);
+            }
+          } else {
+            // Fallback: find article at center of container
+            selectedArticle = findArticleAtPosition(null, scrollContainer, scrollText, newsData.articles);
           }
           
-          // Calculate which article is visible
-          // Since we have 3 copies of all articles, we need to account for that
-          const totalWidth = scrollText.scrollWidth / 3; // Width of one set of articles
-          const progress = Math.abs(translateX) / totalWidth;
-          const articleIndex = Math.floor(progress * newsData.articles.length) % newsData.articles.length;
-          
-          setSelectedArticle(newsData.articles[articleIndex]);
+          if (selectedArticle) {
+            setSelectedArticle(selectedArticle);
+          } else if (newsData.articles.length > 0) {
+            setSelectedArticle(newsData.articles[0]);
+          }
           
           // Set a timeout to allow overlay clicks after modal opens
-          // This prevents the initial click from immediately closing the modal
+          clickTimeoutRef.current = setTimeout(() => {
+            clickTimeoutRef.current = null;
+          }, 100);
+        } else {
+          // Fallback: use first article
+          setSelectedArticle(newsData.articles[0]);
           clickTimeoutRef.current = setTimeout(() => {
             clickTimeoutRef.current = null;
           }, 100);
         }
       } else {
         // Fallback: use first article
-        setSelectedArticle(newsData.articles[0]);
+        if (newsData && newsData.articles && newsData.articles.length > 0) {
+          setSelectedArticle(newsData.articles[0]);
+        }
         clickTimeoutRef.current = setTimeout(() => {
           clickTimeoutRef.current = null;
         }, 100);
@@ -255,9 +306,13 @@ function NewsTicker() {
     });
   };
 
-  // Create a continuous stream of all news items
+  // Create a continuous stream of all news items with data attributes for identification
   const allNewsItems = newsData && newsData.articles ? newsData.articles.map((article, index) => (
-    <React.Fragment key={index}>
+    <span 
+      key={index} 
+      className="news-ticker-item-wrapper"
+      data-article-index={index}
+    >
       <span className="news-ticker-source">{article.source}</span>
       <span className="news-ticker-separator">•</span>
       <span className="news-ticker-title">{article.cleanTitle || article.title}</span>
@@ -268,7 +323,7 @@ function NewsTicker() {
         </>
       )}
       <span className="news-ticker-separator"> • </span>
-    </React.Fragment>
+    </span>
   )) : [];
 
   return (
@@ -352,21 +407,6 @@ function NewsTicker() {
               {allNewsItems}
             </div>
           </div>
-        </div>
-        <div className="news-ticker-controls" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="news-ticker-control-btn"
-            onClick={handlePlayPause}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handlePlayPause(e);
-            }}
-            title={isPaused ? 'Reprendre' : 'Pause'}
-            aria-label={isPaused ? 'Reprendre' : 'Pause'}
-          >
-            {isPaused ? '▶️' : '⏸️'}
-          </button>
         </div>
       </div>
 

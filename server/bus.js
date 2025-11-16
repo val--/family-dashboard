@@ -79,9 +79,17 @@ async function getBusData() {
     const rawData = await makeRequest(url);
     const departures = Array.isArray(rawData) ? rawData : [];
     
+    console.log(`[Bus] 📊 ${departures.length} départs bruts reçus de l'API`);
+    
     // Formater les données pour le frontend
     const formattedDepartures = departures
-      .filter(departure => departure.temps !== undefined && departure.temps !== '')
+      .filter(departure => {
+        const hasTime = departure.temps !== undefined && departure.temps !== '';
+        if (!hasTime) {
+          console.log(`[Bus] ⚠️  Départ filtré (pas de temps):`, { line: departure.ligne?.numLigne, direction: departure.terminus, temps: departure.temps });
+        }
+        return hasTime;
+      })
       .map(departure => {
         const line = departure.ligne?.numLigne || 'N/A';
         const direction = departure.terminus || 'N/A';
@@ -121,6 +129,11 @@ async function getBusData() {
         
         return extractMinutes(a.time) - extractMinutes(b.time);
       });
+
+    console.log(`[Bus] ✅ ${formattedDepartures.length} départs formatés après filtrage`);
+    if (formattedDepartures.length === 0 && departures.length > 0) {
+      console.log(`[Bus] ⚠️  Tous les départs ont été filtrés. Départs bruts:`, JSON.stringify(departures, null, 2));
+    }
 
     const result = {
       stopId: stopId,
