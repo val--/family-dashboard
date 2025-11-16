@@ -73,12 +73,6 @@ class ElectricityService {
     const shouldUseCache = useCache !== null ? useCache : config.myElectricalData.useCache;
     const endpoint = `/daily_consumption/${this.pdl}/start/${start}/end/${end}${shouldUseCache ? '/cache/' : ''}`;
     
-    if (shouldUseCache) {
-      console.log(`[Électricité] 📡 Appel API: daily_consumption (endpoint cache)`);
-    } else {
-      console.log(`[Électricité] 📡 Appel API: daily_consumption (endpoint direct)`);
-    }
-    
     const data = await this.fetchFromAPI(endpoint);
     return data;
   }
@@ -104,12 +98,6 @@ class ElectricityService {
   async getContract(useCache = null) {
     const shouldUseCache = useCache !== null ? useCache : config.myElectricalData.useCache;
     const endpoint = `/contracts/${this.pdl}${shouldUseCache ? '/cache/' : '/'}`;
-    
-    if (shouldUseCache) {
-      console.log(`[Électricité] 📡 Appel API: contracts (endpoint cache)`);
-    } else {
-      console.log(`[Électricité] 📡 Appel API: contracts (endpoint direct)`);
-    }
     
     const data = await this.fetchFromAPI(endpoint);
     return data;
@@ -228,12 +216,8 @@ class ElectricityService {
   async getWidgetData(dailyChartDays = 7) {
     // Check cache first - only use cache if it matches the requested dailyChartDays
     if (this.cache && this.cacheTimestamp && this.cacheDailyChartDays === dailyChartDays && Date.now() - this.cacheTimestamp < this.CACHE_DURATION) {
-      const cacheAge = Math.round((Date.now() - this.cacheTimestamp) / 1000);
-      console.log(`[Électricité] ✅ Données récupérées depuis le cache serveur (âge: ${cacheAge}s, ${dailyChartDays} jours)`);
       return this.cache;
     }
-    
-    console.log(`[Électricité] 🔄 Appel API réel - cache serveur expiré ou inexistant (demandé: ${dailyChartDays} jours, cache: ${this.cacheDailyChartDays || 'aucun'} jours)`);
 
     try {
       const timezone = config.timezone;
@@ -310,11 +294,6 @@ class ElectricityService {
       const needsConversion = dailyData?.meter_reading?.reading_type?.unit === 'Wh';
       const conversionFactor = needsConversion ? 1000 : 1;
 
-      console.log('Extracted readings count:', readings.length);
-      if (readings.length > 0) {
-        console.log('Sample reading:', JSON.stringify(readings[0], null, 2));
-        console.log('Unit:', dailyData?.meter_reading?.reading_type?.unit, 'Conversion factor:', conversionFactor);
-      }
 
       if (readings.length > 0) {
         // Find today's reading
@@ -524,7 +503,6 @@ class ElectricityService {
       this.cache = result;
       this.cacheTimestamp = Date.now();
       this.cacheDailyChartDays = dailyChartDays;
-      console.log(`[Électricité] 💾 Données mises en cache serveur (durée: ${this.CACHE_DURATION / 1000 / 60} minutes, ${dailyChartDays} jours)`);
 
       return result;
     } catch (error) {
