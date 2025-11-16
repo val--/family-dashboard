@@ -12,7 +12,8 @@
     "install:all": "npm install && cd client && npm install",
     "find-email": "node scripts/find-service-account-email.js",
     "fetch-events": "node scripts/fetch-events.js",
-    "fetch-electricity": "node scripts/fetch-electricity.js"
+    "fetch-electricity": "node scripts/fetch-electricity.js",
+    "fetch-news": "node scripts/fetch-news.js"
   },
   "keywords": [
     "calendar",

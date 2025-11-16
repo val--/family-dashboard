@@ -71,6 +71,7 @@ function WeatherWidget() {
           {dateFormat}
         </div>
         <div className="weather-time">
+          <span className="weather-time-icon">🕐</span>
           {format(currentTime, 'HH:mm:ss')}
         </div>
       </div>

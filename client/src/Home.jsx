@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CalendarWidget from './CalendarWidget';
 import ElectricityWidget from './ElectricityWidget';
 import WeatherWidget from './WeatherWidget';
+import NewsTicker from './NewsTicker';
 import { API_URL, REFRESH_INTERVAL, MAX_EVENTS_WIDGET } from './constants';
 
 function Home() {
@@ -74,19 +75,20 @@ function Home() {
   return (
     <div className="home-container">
       <WeatherWidget />
-    <div className="home">
-      <div className="home-left">
-        <CalendarWidget events={events} loading={loading} error={error} />
-      </div>
-      <div className="home-right">
-        <ElectricityWidget 
-          data={electricityData} 
-          loading={electricityLoading} 
-          error={electricityError}
-          compact={true}
-        />
+      <div className="home">
+        <div className="home-left">
+          <CalendarWidget events={events} loading={loading} error={error} />
+        </div>
+        <div className="home-right">
+          <ElectricityWidget 
+            data={electricityData} 
+            loading={electricityLoading} 
+            error={electricityError}
+            compact={true}
+          />
         </div>
       </div>
+      <NewsTicker />
     </div>
   );
 }

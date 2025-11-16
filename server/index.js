@@ -7,6 +7,7 @@ const path = require('path');
 const calendarService = require('./calendar');
 const electricityService = require('./electricity');
 const weatherService = require('./weather');
+const newsService = require('./news');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -61,6 +62,22 @@ app.get('/api/weather', async (req, res) => {
     console.error('Error in /api/weather:', error);
     res.status(500).json({ 
       error: 'Failed to fetch weather data', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+// News API route
+app.get('/api/news', async (req, res) => {
+  try {
+    const newsType = req.query.type || 'france'; // 'france', 'monde', 'tech'
+    const data = await newsService.getNewsData(newsType);
+    res.json({ data, success: true });
+  } catch (error) {
+    console.error('Error in /api/news:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch news data', 
       message: error.message,
       success: false 
     });
