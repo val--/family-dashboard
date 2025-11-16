@@ -1,6 +1,5 @@
 import React from 'react';
-import { isSchoolHoliday } from './holidays';
-import { getColorScheme } from './utils';
+import { isSchoolHoliday, getColorScheme } from '../../utils';
 
 /**
  * Format time display for an event

@@ -5,6 +5,7 @@ export const CALENDAR_TITLE = '📅 Agenda de la famille Le Guiberre';
 export const API_URL = '/api/events';
 export const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 export const BUS_REFRESH_INTERVAL = 1 * 60 * 1000; // 1 minute for bus (more frequent updates needed)
+export const HUE_REFRESH_INTERVAL = 3 * 1000; // 3 seconds for Hue lights (real-time updates)
 
 // Maximum number of events to display
 export const MAX_EVENTS_WIDGET = 10; // Maximum events in the widget

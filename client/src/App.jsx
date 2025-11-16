@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import Calendar from './Calendar';
-import Home from './Home';
-import Electricity from './Electricity';
-import Weather from './Weather';
+import Calendar from './components/pages/Calendar';
+import Home from './components/pages/Home';
+import Electricity from './components/pages/Electricity';
+import Weather from './components/pages/Weather';
+import Hue from './components/pages/Hue';
 
 import { API_URL, REFRESH_INTERVAL } from './constants';
 
@@ -327,6 +328,7 @@ function App() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/electricity" element={<ElectricityPage />} />
         <Route path="/weather" element={<WeatherPage />} />
+        <Route path="/hue" element={<Hue />} />
       </Routes>
     </Router>
   );

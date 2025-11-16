@@ -9,6 +9,7 @@ const electricityService = require('./electricity');
 const weatherService = require('./weather');
 const newsService = require('./news');
 const busService = require('./bus');
+const hueService = require('./hue');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -94,6 +95,57 @@ app.get('/api/bus', async (req, res) => {
     console.error('Error in /api/bus:', error);
     res.status(500).json({ 
       error: 'Failed to fetch bus data', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+// Hue API routes
+app.get('/api/hue/room', async (req, res) => {
+  try {
+    const config = require('./config');
+    const roomName = req.query.room || config.hue.roomName;
+    const data = await hueService.getRoomStatus(roomName);
+    res.json({ data, success: true, roomName: config.hue.roomName });
+  } catch (error) {
+    console.error('Error in /api/hue/room:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Hue room data', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+app.get('/api/hue/config', (req, res) => {
+  try {
+    const config = require('./config');
+    res.json({ 
+      roomName: config.hue.roomName,
+      success: true 
+    });
+  } catch (error) {
+    console.error('Error in /api/hue/config:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Hue config', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+app.post('/api/hue/room/toggle', async (req, res) => {
+  try {
+    const config = require('./config');
+    const roomName = req.body.room || config.hue.roomName;
+    const turnOn = req.body.turnOn !== undefined ? req.body.turnOn : null; // null = toggle
+    const result = await hueService.toggleRoomLights(roomName, turnOn);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/room/toggle:', error);
+    res.status(500).json({ 
+      error: 'Failed to toggle Hue room lights', 
       message: error.message,
       success: false 
     });

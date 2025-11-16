@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import CalendarWidget from './CalendarWidget';
-import ElectricityWidget from './ElectricityWidget';
-import WeatherWidget from './WeatherWidget';
-import NewsTicker from './NewsTicker';
-import BusWidget from './BusWidget';
-import { API_URL, REFRESH_INTERVAL, MAX_EVENTS_WIDGET } from './constants';
+import CalendarWidget from '../widgets/CalendarWidget';
+import ElectricityWidget from '../widgets/ElectricityWidget';
+import WeatherWidget from '../widgets/WeatherWidget';
+import NewsTicker from '../widgets/NewsTicker';
+import BusWidget from '../widgets/BusWidget';
+import HueWidget from '../widgets/HueWidget';
+import { API_URL, REFRESH_INTERVAL, MAX_EVENTS_WIDGET } from '../../constants';
 
 function Home() {
   const [events, setEvents] = useState([]);
@@ -78,7 +79,17 @@ function Home() {
       <WeatherWidget />
       <div className="home">
         <div className="home-left">
-          <CalendarWidget events={events} loading={loading} error={error} />
+          <div className="home-left-top">
+            <CalendarWidget 
+              events={events} 
+              loading={loading} 
+              error={error}
+              onRefresh={fetchEvents}
+            />
+          </div>
+          <div className="home-left-bottom">
+            <HueWidget />
+          </div>
         </div>
         <div className="home-right">
           <div className="home-right-top">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BUS_REFRESH_INTERVAL } from './constants';
+import { BUS_REFRESH_INTERVAL } from '../../constants';
 
 function BusWidget() {
   const [busData, setBusData] = useState(null);

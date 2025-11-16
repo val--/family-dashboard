@@ -42,30 +42,14 @@ function makeRequest(url) {
       }
     };
 
-    console.log('📡 Requête HTTP:');
-    console.log(`  - URL: ${url}`);
-    console.log(`  - Hostname: ${options.hostname}`);
-    console.log(`  - Path: ${options.path}`);
-    console.log(`  - Headers:`, options.headers);
-    console.log('');
-
     const req = https.request(options, (res) => {
       let data = '';
-
-      console.log('📥 Réponse HTTP:');
-      console.log(`  - Status Code: ${res.statusCode}`);
-      console.log(`  - Status Message: ${res.statusMessage}`);
-      console.log(`  - Headers:`, res.headers);
-      console.log('');
 
       res.on('data', (chunk) => {
         data += chunk;
       });
 
       res.on('end', () => {
-        console.log('📄 Corps de la réponse:');
-        console.log(`  - Taille: ${data.length} caractères`);
-        console.log('');
 
         if (res.statusCode === 200) {
           try {

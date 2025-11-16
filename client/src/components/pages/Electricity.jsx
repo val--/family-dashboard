@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import ElectricityWidget from './ElectricityWidget';
+import ElectricityWidget from '../widgets/ElectricityWidget';
 
 function Electricity({ data, loading, error }) {
   const navigate = useNavigate();

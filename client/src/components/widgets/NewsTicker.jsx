@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { REFRESH_INTERVAL } from './constants';
+import { REFRESH_INTERVAL } from '../../constants';
 
 function NewsTicker() {
   const [newsData, setNewsData] = useState(null);

@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { isSchoolHoliday } from './holidays';
-import { CALENDAR_TITLE } from './constants';
-import { getDateTitle } from './utils';
-import { EventItem, formatEventTime } from './EventItem';
+import { isSchoolHoliday, getDateTitle } from '../../utils';
+import { CALENDAR_TITLE } from '../../constants';
+import { EventItem, formatEventTime } from '../common/EventItem';
 
 function Calendar({ events }) {
   const [selectedEvent, setSelectedEvent] = useState(null);

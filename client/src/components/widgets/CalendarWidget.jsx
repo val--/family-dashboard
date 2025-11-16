@@ -1,23 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseISO, startOfDay } from 'date-fns';
-import { CALENDAR_TITLE, MAX_DATES_WIDGET, MAX_EVENTS_PER_DATE_WIDGET } from './constants';
-import { getDateTitle } from './utils';
-import { EventItem } from './EventItem';
+import { CALENDAR_TITLE, MAX_DATES_WIDGET, MAX_EVENTS_PER_DATE_WIDGET } from '../../constants';
+import { getDateTitle } from '../../utils';
+import { EventItem } from '../common/EventItem';
 
-function CalendarWidget({ events, loading, error }) {
+function CalendarWidget({ events, loading, error, onRefresh }) {
   const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleClick = () => {
     navigate('/calendar');
   };
 
+  const handleRefresh = async (e) => {
+    e.stopPropagation(); // Prevent navigation to /calendar
+    if (onRefresh && !isRefreshing) {
+      setIsRefreshing(true);
+      try {
+        await onRefresh();
+      } finally {
+        // Small delay to show the refresh animation
+        setTimeout(() => setIsRefreshing(false), 500);
+      }
+    }
+  };
+
+  const renderHeader = () => (
+    <div className="calendar-widget-header">
+      <h2 className="calendar-widget-title">{CALENDAR_TITLE}</h2>
+      {onRefresh && (
+        <button
+          className={`calendar-widget-refresh ${isRefreshing ? 'refreshing' : ''}`}
+          onClick={handleRefresh}
+          title="Rafraîchir"
+          aria-label="Rafraîchir le calendrier"
+        >
+          🔄
+        </button>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="calendar-widget" onClick={handleClick}>
-        <div className="calendar-widget-header">
-          <h2 className="calendar-widget-title">{CALENDAR_TITLE}</h2>
-        </div>
+        {renderHeader()}
         <div className="calendar-widget-content">
           <div className="calendar-widget-loading">Chargement...</div>
         </div>
@@ -28,9 +56,7 @@ function CalendarWidget({ events, loading, error }) {
   if (error) {
     return (
       <div className="calendar-widget" onClick={handleClick}>
-        <div className="calendar-widget-header">
-          <h2 className="calendar-widget-title">{CALENDAR_TITLE}</h2>
-        </div>
+        {renderHeader()}
         <div className="calendar-widget-content">
           <div className="calendar-widget-error">{error}</div>
         </div>
@@ -41,9 +67,7 @@ function CalendarWidget({ events, loading, error }) {
   if (!events || events.length === 0) {
     return (
       <div className="calendar-widget" onClick={handleClick}>
-        <div className="calendar-widget-header">
-          <h2 className="calendar-widget-title">{CALENDAR_TITLE}</h2>
-        </div>
+        {renderHeader()}
         <div className="calendar-widget-content">
           <div className="calendar-widget-empty">Aucun événement à venir</div>
         </div>
@@ -65,9 +89,7 @@ function CalendarWidget({ events, loading, error }) {
 
   return (
     <div className="calendar-widget" onClick={handleClick}>
-      <div className="calendar-widget-header">
-        <h2 className="calendar-widget-title">{CALENDAR_TITLE}</h2>
-      </div>
+      {renderHeader()}
       <div className="calendar-widget-content">
         {sortedDateKeys.map((dateKey) => {
           const dateEvents = eventsByDate[dateKey];

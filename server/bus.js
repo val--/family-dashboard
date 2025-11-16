@@ -79,16 +79,10 @@ async function getBusData() {
     const rawData = await makeRequest(url);
     const departures = Array.isArray(rawData) ? rawData : [];
     
-    console.log(`[Bus] 📊 ${departures.length} départs bruts reçus de l'API`);
-    
     // Formater les données pour le frontend
     const formattedDepartures = departures
       .filter(departure => {
-        const hasTime = departure.temps !== undefined && departure.temps !== '';
-        if (!hasTime) {
-          console.log(`[Bus] ⚠️  Départ filtré (pas de temps):`, { line: departure.ligne?.numLigne, direction: departure.terminus, temps: departure.temps });
-        }
-        return hasTime;
+        return departure.temps !== undefined && departure.temps !== '';
       })
       .map(departure => {
         const line = departure.ligne?.numLigne || 'N/A';
@@ -97,9 +91,11 @@ async function getBusData() {
         // Formater le temps d'attente
         let time;
         if (departure.temps && departure.temps !== '') {
+          const tempsLower = departure.temps.toLowerCase();
           if (departure.temps === 'A l\'approche' || departure.temps === 'A l\'arrivée' || 
-              departure.temps.toLowerCase().includes('approche') || 
-              departure.temps.toLowerCase().includes('arrivée')) {
+              tempsLower.includes('approche') || 
+              tempsLower.includes('arrivée') ||
+              tempsLower.includes('proche')) {
             time = 'Départ proche';
           } else if (departure.temps.includes('mn')) {
             time = `Dans ${departure.temps}`;
@@ -129,11 +125,6 @@ async function getBusData() {
         
         return extractMinutes(a.time) - extractMinutes(b.time);
       });
-
-    console.log(`[Bus] ✅ ${formattedDepartures.length} départs formatés après filtrage`);
-    if (formattedDepartures.length === 0 && departures.length > 0) {
-      console.log(`[Bus] ⚠️  Tous les départs ont été filtrés. Départs bruts:`, JSON.stringify(departures, null, 2));
-    }
 
     const result = {
       stopId: stopId,

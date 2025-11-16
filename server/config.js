@@ -27,5 +27,10 @@ module.exports = {
   bus: {
     stopId: process.env.BUS_STOP_ID || 'LHOU', // Code de l'arrêt (ex: LHOU pour "La Houssais" à Rezé)
     stopName: process.env.BUS_STOP_NAME || 'La Houssais' // Nom de l'arrêt (optionnel, pour affichage)
+  },
+  hue: {
+    bridgeIp: process.env.HUE_BRIDGE_IP || '192.168.1.222',
+    appKey: process.env.HUE_APP_KEY || '',
+    roomName: process.env.HUE_ROOM_NAME || 'Salon' // Nom de la pièce à contrôler (ex: Salon, Bureau)
   }
 };

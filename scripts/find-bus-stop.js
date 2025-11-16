@@ -38,13 +38,6 @@ https.get(url, (res) => {
             }
 
             console.log(`✅ ${stops.length} arrêts trouvés à proximité\n`);
-            
-            // Afficher la structure du premier arrêt pour debug
-            if (stops.length > 0) {
-              console.log('📋 Structure d\'un arrêt (premier exemple):');
-              console.log(JSON.stringify(stops[0], null, 2));
-              console.log('\n');
-            }
 
             // Chercher l'arrêt par nom (insensible à la casse)
             const searchTerm = stopName.toLowerCase();

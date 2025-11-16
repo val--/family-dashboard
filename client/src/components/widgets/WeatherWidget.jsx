@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { REFRESH_INTERVAL } from './constants';
+import { REFRESH_INTERVAL } from '../../constants';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
