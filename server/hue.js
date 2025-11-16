@@ -146,6 +146,8 @@ async function getRoomStatus(roomName = 'Salon', debugLog = null) {
         owner: groupedLight.owner || null,
         on: groupedLight.on?.on,
         brightness: groupedLight.dimming?.brightness,
+        hasColor: !!groupedLight.color,
+        color: groupedLight.color || null,
         allKeys: Object.keys(groupedLight)
       }, null, 2)}`);
       
@@ -498,6 +500,119 @@ async function getRoomStatus(roomName = 'Salon', debugLog = null) {
       : (groupedLight.services?.filter(s => s.rtype === 'light').length || 0);
     const lightsOn = roomLights.filter(light => light.on?.on).length;
 
+    // Calculate average color from lights that are on
+    // Check if xy is an object {x, y} or an array [x, y]
+    const hasValidColor = (light) => {
+      if (!light.on?.on || !light.color || !light.color.xy) return false;
+      // Check if it's an object with x and y properties
+      if (typeof light.color.xy === 'object' && light.color.xy.x !== undefined && light.color.xy.y !== undefined) {
+        return true;
+      }
+      // Check if it's an array
+      if (Array.isArray(light.color.xy) && light.color.xy.length >= 2) {
+        return true;
+      }
+      return false;
+    };
+    
+    const lightsWithColor = roomLights.filter(hasValidColor);
+    
+    // Helper to extract x, y from either format
+    const getXY = (xy) => {
+      if (typeof xy === 'object' && xy.x !== undefined && xy.y !== undefined) {
+        return { x: xy.x, y: xy.y };
+      }
+      if (Array.isArray(xy) && xy.length >= 2) {
+        return { x: xy[0], y: xy[1] };
+      }
+      return null;
+    };
+    
+    // Also check grouped_light for color (scenarios might set color at group level)
+    let avgColor = null;
+    
+    // First, try to get color from grouped_light (for scenarios)
+    if (groupedLight.color && groupedLight.color.xy) {
+      const groupedXY = getXY(groupedLight.color.xy);
+      if (groupedXY) {
+        avgColor = xyToRgb(groupedXY.x, groupedXY.y);
+      }
+    }
+    
+    // Fallback: calculate weighted average from individual lights (weighted by brightness)
+    // This gives more accurate results when lights have different brightness levels
+    if (!avgColor && lightsWithColor.length > 0) {
+      let totalWeight = 0;
+      const weightedXY = lightsWithColor.reduce((acc, light) => {
+        const xy = getXY(light.color.xy);
+        if (xy) {
+          // Weight by brightness (0-100) to give more importance to brighter lights
+          const weight = (light.dimming?.brightness || 100) / 100;
+          acc.x += xy.x * weight;
+          acc.y += xy.y * weight;
+          totalWeight += weight;
+        }
+        return acc;
+      }, { x: 0, y: 0 });
+      
+      if (totalWeight > 0) {
+        weightedXY.x /= totalWeight;
+        weightedXY.y /= totalWeight;
+        avgColor = xyToRgb(weightedXY.x, weightedXY.y);
+      }
+    }
+    
+    // Helper function to convert XY to RGB (improved accuracy for Philips Hue)
+    function xyToRgb(x, y) {
+      // Clamp x and y to valid range
+      x = Math.max(0, Math.min(1, x));
+      y = Math.max(0, Math.min(1, y));
+      
+      // Avoid division by zero
+      if (y === 0) {
+        return '#FFFFFF'; // Default to white if invalid
+      }
+      
+      // Convert XY to XYZ (CIE 1931 color space)
+      // Using standard D65 white point (x=0.3127, y=0.3290)
+      // Y is set to 1.0 for full brightness
+      const Y = 1.0;
+      const X = (x / y) * Y;
+      const Z = ((1.0 - x - y) / y) * Y;
+      
+      // Convert XYZ to linear RGB using sRGB matrix (D65 white point)
+      // Matrix from: http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+      let r = X *  3.2404542 + Y * -1.5371385 + Z * -0.4985314;
+      let g = X * -0.9692660 + Y *  1.8760108 + Z *  0.0415560;
+      let b = X *  0.0556434 + Y * -0.2040259 + Z *  1.0572252;
+      
+      // Apply gamma correction (sRGB gamma curve)
+      const gammaCorrection = (val) => {
+        if (val <= 0.0031308) {
+          return 12.92 * val;
+        } else {
+          return 1.055 * Math.pow(val, 1.0 / 2.4) - 0.055;
+        }
+      };
+      
+      r = gammaCorrection(r);
+      g = gammaCorrection(g);
+      b = gammaCorrection(b);
+      
+      // Clamp values to 0-1 range, then convert to 0-255
+      r = Math.max(0, Math.min(1, r));
+      g = Math.max(0, Math.min(1, g));
+      b = Math.max(0, Math.min(1, b));
+      
+      // Convert to 0-255 and round
+      const r255 = Math.round(r * 255);
+      const g255 = Math.round(g * 255);
+      const b255 = Math.round(b * 255);
+      
+      // Convert to hex
+      return `#${r255.toString(16).padStart(2, '0')}${g255.toString(16).padStart(2, '0')}${b255.toString(16).padStart(2, '0')}`;
+    }
+
     const result = {
       room: {
         id: room.id,
@@ -510,7 +625,36 @@ async function getRoomStatus(roomName = 'Salon', debugLog = null) {
         allOff: roomLights.length > 0 ? allOff : (!groupedLight.on?.on),
         brightness: avgBrightness,
         lightsCount,
-        lightsOn: roomLights.length > 0 ? lightsOn : (groupedLight.on?.on ? lightsCount : 0)
+        lightsOn: roomLights.length > 0 ? lightsOn : (groupedLight.on?.on ? lightsCount : 0),
+        color: avgColor,
+        colorXY: avgColor ? (() => {
+          // Try to get XY from grouped_light first (most accurate)
+          if (groupedLight.color && groupedLight.color.xy) {
+            const xy = getXY(groupedLight.color.xy);
+            if (xy) return xy;
+          }
+          // Fallback: calculate average XY from individual lights
+          if (lightsWithColor.length > 0) {
+            let totalWeight = 0;
+            const weightedXY = lightsWithColor.reduce((acc, light) => {
+              const xy = getXY(light.color.xy);
+              if (xy) {
+                const weight = (light.dimming?.brightness || 100) / 100;
+                acc.x += xy.x * weight;
+                acc.y += xy.y * weight;
+                totalWeight += weight;
+              }
+              return acc;
+            }, { x: 0, y: 0 });
+            if (totalWeight > 0) {
+              return {
+                x: weightedXY.x / totalWeight,
+                y: weightedXY.y / totalWeight
+              };
+            }
+          }
+          return null;
+        })() : null
       },
       lights: roomLights.map(light => ({
         id: light.id,
@@ -606,7 +750,115 @@ async function toggleRoomLights(roomName = 'Salon', turnOn = null) {
   }
 }
 
+async function setRoomBrightness(roomName = 'Salon', brightness) {
+  try {
+    if (!HUE_APP_KEY) {
+      throw new Error('HUE_APP_KEY not configured');
+    }
+
+    // Validate brightness value (0-100)
+    const brightnessValue = Math.max(0, Math.min(100, Math.round(brightness)));
+
+    // Get room and grouped_light
+    const roomsUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/room`;
+    const roomsData = await makeRequest(roomsUrl);
+    
+    const room = roomsData.data?.find(r => 
+      r.metadata?.name?.toLowerCase() === roomName.toLowerCase()
+    );
+
+    if (!room) {
+      throw new Error(`Room "${roomName}" not found`);
+    }
+
+    const groupedLightService = room.services?.find(s => s.rtype === 'grouped_light');
+    
+    if (!groupedLightService) {
+      throw new Error(`No grouped_light service found for room "${roomName}"`);
+    }
+
+    // Update the grouped_light brightness
+    // If brightness is 0, turn off; if > 0, turn on and set brightness
+    const updateUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/grouped_light/${groupedLightService.rid}`;
+    await makeRequest(updateUrl, {
+      method: 'PUT',
+      body: {
+        on: {
+          on: brightnessValue > 0
+        },
+        dimming: {
+          brightness: brightnessValue
+        }
+      }
+    });
+
+    // Invalidate cache to force refresh
+    hueCache = null;
+    cacheTimestamp = null;
+
+    return { success: true, brightness: brightnessValue };
+  } catch (error) {
+    console.error('[Hue] ❌ Erreur lors du réglage de la luminosité:', error.message);
+    throw error;
+  }
+}
+
+async function setRoomColor(roomName = 'Salon', xy) {
+  try {
+    if (!HUE_APP_KEY) {
+      throw new Error('HUE_APP_KEY not configured');
+    }
+
+    if (!xy || typeof xy.x === 'undefined' || typeof xy.y === 'undefined') {
+      throw new Error('XY coordinates are required');
+    }
+
+    // Get room and grouped_light
+    const roomsUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/room`;
+    const roomsData = await makeRequest(roomsUrl);
+    
+    const room = roomsData.data?.find(r => 
+      r.metadata?.name?.toLowerCase() === roomName.toLowerCase()
+    );
+
+    if (!room) {
+      throw new Error(`Room "${roomName}" not found`);
+    }
+
+    const groupedLightService = room.services?.find(s => s.rtype === 'grouped_light');
+    
+    if (!groupedLightService) {
+      throw new Error(`No grouped_light service found for room "${roomName}"`);
+    }
+
+    // Update the grouped_light color
+    const updateUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/grouped_light/${groupedLightService.rid}`;
+    await makeRequest(updateUrl, {
+      method: 'PUT',
+      body: {
+        color: {
+          xy: {
+            x: xy.x,
+            y: xy.y
+          }
+        }
+      }
+    });
+
+    // Invalidate cache to force refresh
+    hueCache = null;
+    cacheTimestamp = null;
+
+    return { success: true, color: { x: xy.x, y: xy.y } };
+  } catch (error) {
+    console.error('[Hue] ❌ Erreur lors du changement de couleur:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   getRoomStatus,
   toggleRoomLights,
+  setRoomBrightness,
+  setRoomColor,
 };

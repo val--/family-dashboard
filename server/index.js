@@ -152,6 +152,56 @@ app.post('/api/hue/room/toggle', async (req, res) => {
   }
 });
 
+app.post('/api/hue/room/brightness', async (req, res) => {
+  try {
+    const config = require('./config');
+    const roomName = req.body.room || config.hue.roomName;
+    const brightness = req.body.brightness;
+    
+    if (brightness === undefined || brightness === null) {
+      return res.status(400).json({ 
+        error: 'Brightness value is required', 
+        success: false 
+      });
+    }
+    
+    const result = await hueService.setRoomBrightness(roomName, brightness);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/room/brightness:', error);
+    res.status(500).json({ 
+      error: 'Failed to set Hue room brightness', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+app.post('/api/hue/room/color', async (req, res) => {
+  try {
+    const config = require('./config');
+    const roomName = req.body.room || config.hue.roomName;
+    const xy = req.body.xy;
+    
+    if (!xy || typeof xy.x === 'undefined' || typeof xy.y === 'undefined') {
+      return res.status(400).json({ 
+        error: 'XY coordinates are required', 
+        success: false 
+      });
+    }
+    
+    const result = await hueService.setRoomColor(roomName, xy);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/room/color:', error);
+    res.status(500).json({ 
+      error: 'Failed to set Hue room color', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

@@ -1272,6 +1272,8 @@ body {
 .hue-page-widget .hue-status-brightness {
   font-size: 14px;
   color: #6c757d;
+  min-height: 16px; /* Réserve l'espace même quand masqué */
+  line-height: 16px;
 }
 
 .hue-page-widget .hue-lights-count {
@@ -1284,9 +1286,41 @@ body {
 }
 
 .hue-page-widget .hue-status-indicator {
-  font-size: 32px;
+  font-size: 40px;
   line-height: 1;
   flex-shrink: 0;
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hue-page-widget .hue-status-indicator.on {
+  background-color: #ffd700;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.hue-page-widget .hue-status-indicator.on[style*="background-color"] {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.hue-page-widget .hue-status-indicator.partial {
+  background-color: #ffa500;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.hue-page-widget .hue-status-indicator-clickable {
+  cursor: pointer;
+}
+
+.hue-page-widget .hue-status-indicator-clickable:hover {
+  transform: scale(1.15);
+  border-color: rgba(0, 0, 0, 0.25);
 }
 
 .hue-page-widget .hue-light-item {
@@ -2111,9 +2145,12 @@ body {
 }
 
 .hue-widget-header {
-  padding: 10px 12px;
-  border-bottom: 2px solid #ffd700;
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--hue-color, #ffd700);
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .hue-widget-header::before {
@@ -2123,24 +2160,36 @@ body {
   bottom: -2px;
   width: 40px;
   height: 2px;
-  background: linear-gradient(to right, #ffd700, #ffed4e);
+  background: var(--hue-color, #ffd700);
+  opacity: 0.8;
 }
 
 .hue-widget-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #2c3e50;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.hue-widget-header-count {
+  font-size: 9px;
+  color: #868e96;
+  font-weight: 500;
+  margin-left: 8px;
 }
 
 .hue-widget-content {
-  padding: 10px 12px;
+  padding: 8px 10px;
   flex: 1;
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .hue-widget-content::-webkit-scrollbar {
@@ -2159,41 +2208,66 @@ body {
 .hue-status {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .hue-status-main {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .hue-status-indicator {
-  font-size: 24px;
+  font-size: 28px;
   line-height: 1;
   flex-shrink: 0;
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hue-status-indicator-clickable {
+  cursor: pointer;
+}
+
+.hue-status-indicator-clickable:hover {
+  transform: scale(1.15);
+  border-color: rgba(0, 0, 0, 0.2);
 }
 
 .hue-status-indicator.on {
-  color: #ffd700;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  background-color: #ffd700; /* Fallback si pas de couleur définie */
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
-.hue-status-indicator.partial {
-  color: #ffa500;
-  text-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
+.hue-status-indicator.on[style*="background-color"] {
+  /* Si une couleur inline est définie, le background-color est déjà appliqué */
+  /* Bordure plus visible pour les couleurs claires */
+  border-color: rgba(0, 0, 0, 0.2);
 }
 
 .hue-status-indicator.off {
   color: #95a5a6;
   opacity: 0.5;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.hue-status-indicator.partial {
+  background-color: #ffa500;
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 .hue-status-text {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .hue-status-state {
@@ -2205,14 +2279,269 @@ body {
 .hue-status-brightness {
   font-size: 10px;
   color: #6c757d;
+  min-height: 12px; /* Réserve l'espace même quand masqué */
+  line-height: 12px;
+}
+
+.hue-status-brightness-hidden {
+  visibility: hidden; /* Masque le texte mais garde l'espace */
 }
 
 .hue-lights-count {
-  font-size: 10px;
+  font-size: 9px;
   color: #868e96;
   text-align: right;
-  padding-top: 4px;
+  padding-top: 3px;
   border-top: 1px solid #e9ecef;
+  margin-top: 2px;
+}
+
+/* Brightness control slider */
+.hue-brightness-control {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid #e9ecef;
+}
+
+.hue-brightness-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+
+.hue-brightness-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.hue-brightness-slider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #e9ecef;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.hue-brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--hue-color, #ffd700);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.hue-brightness-slider::-webkit-slider-thumb:hover {
+  background: var(--hue-color, #ffed4e);
+  filter: brightness(1.1);
+  transform: scale(1.1);
+}
+
+.hue-brightness-slider::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+}
+
+.hue-brightness-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--hue-color, #ffd700);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.hue-brightness-slider::-moz-range-thumb:hover {
+  background: var(--hue-color, #ffed4e);
+  filter: brightness(1.1);
+  transform: scale(1.1);
+}
+
+.hue-brightness-slider::-moz-range-thumb:active {
+  transform: scale(0.95);
+}
+
+.hue-brightness-slider:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.hue-brightness-control-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.hue-brightness-control-disabled .hue-brightness-label {
+  opacity: 0.6;
+}
+
+/* Brightness control for page */
+.hue-brightness-control-page {
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.hue-brightness-control-page .hue-brightness-label {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.hue-brightness-control-page .hue-brightness-value {
+  font-size: 16px;
+}
+
+.hue-brightness-control-page .hue-brightness-slider {
+  height: 6px;
+}
+
+.hue-brightness-control-page .hue-brightness-slider::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+}
+
+.hue-brightness-control-page .hue-brightness-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+}
+
+/* Hue Color Modal */
+.hue-color-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2000 !important;
+  animation: fadeIn 0.2s ease;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.hue-color-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-width: 95%;
+  width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+.hue-color-modal-header {
+  padding: 24px 30px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hue-color-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.hue-color-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.hue-color-modal-close:hover {
+  background: #f8f9fa;
+  color: #2c3e50;
+}
+
+.hue-color-modal-content {
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.hue-color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+.hue-color-item {
+  aspect-ratio: 1;
+  border: 3px solid #e9ecef;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-height: 80px;
+}
+
+.hue-color-item:hover {
+  transform: scale(1.1);
+  border-color: #2c3e50;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.hue-color-item:active {
+  transform: scale(0.95);
+}
+
+.hue-color-selected {
+  font-weight: bold;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .hue-lights-list {
@@ -2264,13 +2593,13 @@ body {
 
 .hue-toggle-button {
   width: 100%;
-  padding: 10px 16px;
-  margin-top: 12px;
-  background: #ffd700;
+  padding: 8px 12px;
+  margin-top: 6px;
+  background: var(--hue-color, #ffd700);
   color: #2c3e50;
   border: none;
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2282,7 +2611,8 @@ body {
 }
 
 .hue-toggle-button:hover:not(:disabled) {
-  background: #ffed4e;
+  background: var(--hue-color, #ffed4e);
+  filter: brightness(1.1);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
 }
