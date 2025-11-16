@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import Calendar from './Calendar';
 import Home from './Home';
 import Electricity from './Electricity';
+import Weather from './Weather';
 
 import { API_URL, REFRESH_INTERVAL } from './constants';
 
@@ -227,6 +228,97 @@ function ElectricityPage() {
   );
 }
 
+function WeatherPage() {
+  const [weatherData, setWeatherData] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState(null);
+  const appRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Enable drag-to-scroll - simplified approach
+  useEffect(() => {
+    const container = appRef.current;
+    if (!container) return;
+
+    // Only handle mouse drag, let native touch scrolling work
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    const onMouseDown = (e) => {
+      if (e.target.closest('a, button, .weather-page-hourly-item')) return;
+      isDragging = true;
+      startY = e.clientY;
+      startScrollTop = container.scrollTop;
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+      e.preventDefault();
+    };
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const deltaY = e.clientY - startY;
+      container.scrollTop = startScrollTop - deltaY;
+      e.preventDefault();
+    };
+
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        container.style.cursor = '';
+        container.style.userSelect = '';
+      }
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  const fetchWeather = async () => {
+    try {
+      setWeatherError(null);
+      const response = await fetch('/api/weather');
+      const result = await response.json();
+      
+      if (result.success) {
+        setWeatherData(result.data);
+      } else {
+        throw new Error(result.message || 'Failed to fetch weather data');
+      }
+    } catch (err) {
+      console.error('Error fetching weather:', err);
+      setWeatherError(err.message || 'Erreur lors du chargement de la météo');
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch immediately on mount
+    fetchWeather();
+
+    // Set up automatic refresh
+    const interval = setInterval(() => {
+      fetchWeather();
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="app" ref={appRef}>
+      <Weather data={weatherData} loading={weatherLoading} error={weatherError} />
+    </div>
+  );
+}
+
 function App() {
   return (
     <Router>
@@ -234,6 +326,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/electricity" element={<ElectricityPage />} />
+        <Route path="/weather" element={<WeatherPage />} />
       </Routes>
     </Router>
   );

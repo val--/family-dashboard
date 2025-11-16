@@ -4,9 +4,9 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
 
 ## Fonctionnalités
 
-- **Bandeau Météo** : Affiché en haut de toutes les pages
+- **Bandeau Météo** : Affiché en haut de la page d'accueil
   - Météo actuelle avec température, conditions et icône
-  - Prévisions sur 4 jours à venir
+  - Prévisions sur 7 jours glissants (aujourd'hui + 6 jours)
   - Ville configurable (par défaut : Rezé)
   - Actualisation automatique
 
@@ -122,6 +122,53 @@ La configuration se fait via le fichier `.env` (voir la section Configuration ci
 - `WEATHER_CITY` : Nom de la ville pour la météo (par défaut : Rezé)
 - `WEATHER_UNITS` : Unités de température (metric, imperial, kelvin - par défaut : metric)
 - `WEATHER_LANG` : Langue des descriptions météo (par défaut : fr)
+
+## Fonctionnement du cache et des appels API
+
+### API MyElectricalData
+
+Le système utilise plusieurs niveaux de cache pour réduire les appels API et éviter les erreurs 409 (rate limiting) :
+
+#### 1. Endpoints cache de l'API
+
+Par défaut, le système utilise les endpoints `/cache/` de l'API MyElectricalData :
+- `/daily_consumption/{pdl}/start/{start}/end/{end}/cache/` au lieu de `/daily_consumption/{pdl}/start/{start}/end/{end}`
+- `/contracts/{pdl}/cache/` au lieu de `/contracts/{pdl}/`
+
+Ces endpoints cache de l'API retournent des données mises en cache côté serveur MyElectricalData, ce qui réduit la charge sur leur infrastructure et limite les risques d'erreurs 409.
+
+#### 2. Cache côté serveur (application)
+
+L'application maintient également un cache local des données :
+- **Durée du cache** : 10 minutes
+- **Portée** : Les données du widget (consommation quotidienne, mensuelle, informations du contrat)
+- **Avantage** : Évite les appels API répétés pendant 10 minutes, même si plusieurs utilisateurs consultent le dashboard
+
+#### 3. Délais entre les appels API
+
+Pour respecter les limites de l'API (5 appels/seconde, 10000 appels/heure), des délais sont ajoutés entre les appels :
+- **1 seconde** entre chaque appel API (daily consumption, previous week, contract, monthly data)
+- **3 secondes** de délai lors des retries en cas d'erreur 409
+
+#### 4. Gestion des erreurs 409
+
+En cas d'erreur 409 (rate limiting) :
+- **Retry automatique** : 2 tentatives avec un délai de 3 secondes entre chaque
+- **Logs limités** : Les erreurs 409 ne sont loggées qu'une fois toutes les 5 minutes pour éviter de saturer les logs
+- **Cache conservé** : Si une erreur survient, les données en cache (si disponibles) sont retournées
+
+#### 5. Actualisation automatique
+
+- Le frontend actualise les données toutes les **5 minutes** (REFRESH_INTERVAL)
+- Grâce au cache serveur de 10 minutes, cela signifie qu'un appel API réel n'est fait que toutes les **10 minutes** maximum
+- Cela réduit drastiquement le nombre d'appels API (de ~288 appels/jour à ~144 appels/jour)
+
+### API Météo (OpenWeatherMap)
+
+Le système utilise également un cache pour la météo :
+- **Durée du cache** : 10 minutes
+- **Avantage** : Limite les appels API (gratuit jusqu'à 1000 appels/jour)
+- **Gestion d'erreur** : Les erreurs ne sont loggées qu'une fois toutes les 5 minutes
 
 ## Scripts
 

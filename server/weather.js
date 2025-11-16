@@ -54,15 +54,21 @@ async function getWeatherData() {
 
   // Check cache
   if (weatherCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    const cacheAge = Math.round((Date.now() - cacheTimestamp) / 1000);
+    console.log(`[Météo] ✅ Données récupérées depuis le cache serveur (âge: ${cacheAge}s)`);
     return weatherCache;
   }
+  
+  console.log(`[Météo] 🔄 Appel API réel - cache serveur expiré ou inexistant`);
 
   try {
+    console.log(`[Météo] 📡 Appel API: forecast (prévisions 5 jours)`);
     const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(WEATHER_CITY)}&appid=${WEATHER_API_KEY}&units=${WEATHER_UNITS}&lang=${WEATHER_LANG}`;
     
     const forecastData = await makeRequest(url);
     
     // Also get current weather
+    console.log(`[Météo] 📡 Appel API: current (météo actuelle)`);
     const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(WEATHER_CITY)}&appid=${WEATHER_API_KEY}&units=${WEATHER_UNITS}&lang=${WEATHER_LANG}`;
     const currentData = await makeRequest(currentUrl);
 
@@ -117,11 +123,13 @@ async function getWeatherData() {
       country: forecastData.city.country,
       current: forecasts[0] || null,
       forecast: forecasts.slice(1, 7), // Next 6 days (total 7 jours avec aujourd'hui)
+      hourlyForecast: forecastData.list, // All hourly forecasts for detailed page
     };
 
     // Update cache
     weatherCache = result;
     cacheTimestamp = Date.now();
+    console.log(`[Météo] 💾 Données mises en cache serveur (durée: ${CACHE_DURATION / 1000 / 60} minutes)`);
 
     return result;
   } catch (error) {

@@ -9,6 +9,11 @@ class ElectricityService {
     this.baseUrl = config.myElectricalData.baseUrl;
     this.pdl = config.myElectricalData.pointDeLivraison;
     this.token = config.myElectricalData.token;
+    this.cache = null;
+    this.cacheTimestamp = null;
+    this.CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
+    this.last409ErrorLogTime = 0;
+    this.ERROR_LOG_INTERVAL = 5 * 60 * 1000; // Log 409 errors at most once every 5 minutes
   }
 
   async fetchFromAPI(endpoint, retries = 2) {
@@ -22,15 +27,24 @@ class ElectricityService {
 
       return response.data;
     } catch (error) {
-      console.error('Error fetching from MyElectricalData API:', error.message);
+      // Only log error if it's not a 409 (handled separately) or if enough time has passed
+      const now = Date.now();
+      if (error.response?.status !== 409 && (now - this.last409ErrorLogTime > this.ERROR_LOG_INTERVAL)) {
+        console.error('Error fetching from MyElectricalData API:', error.message);
+      }
       if (error.response) {
         const status = error.response.status;
         const statusText = error.response.statusText;
         
         // Handle 409 Conflict (rate limiting) with retry
         if (status === 409 && retries > 0) {
-          console.log(`Rate limit hit (409), retrying in 2 seconds... (${retries} retries left)`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          const now = Date.now();
+          if (now - this.last409ErrorLogTime > this.ERROR_LOG_INTERVAL) {
+            console.log(`Rate limit hit (409), retrying in 3 seconds... (${retries} retries left)`);
+            this.last409ErrorLogTime = now;
+          }
+          // Increase delay to 3 seconds for 409 errors
+          await new Promise(resolve => setTimeout(resolve, 3000));
           return this.fetchFromAPI(endpoint, retries - 1);
         }
         
@@ -58,6 +72,12 @@ class ElectricityService {
     const shouldUseCache = useCache !== null ? useCache : config.myElectricalData.useCache;
     const endpoint = `/daily_consumption/${this.pdl}/start/${start}/end/${end}${shouldUseCache ? '/cache/' : ''}`;
     
+    if (shouldUseCache) {
+      console.log(`[Électricité] 📡 Appel API: daily_consumption (endpoint cache)`);
+    } else {
+      console.log(`[Électricité] 📡 Appel API: daily_consumption (endpoint direct)`);
+    }
+    
     const data = await this.fetchFromAPI(endpoint);
     return data;
   }
@@ -83,6 +103,13 @@ class ElectricityService {
   async getContract(useCache = null) {
     const shouldUseCache = useCache !== null ? useCache : config.myElectricalData.useCache;
     const endpoint = `/contracts/${this.pdl}${shouldUseCache ? '/cache/' : '/'}`;
+    
+    if (shouldUseCache) {
+      console.log(`[Électricité] 📡 Appel API: contracts (endpoint cache)`);
+    } else {
+      console.log(`[Électricité] 📡 Appel API: contracts (endpoint direct)`);
+    }
+    
     const data = await this.fetchFromAPI(endpoint);
     return data;
   }
@@ -198,6 +225,15 @@ class ElectricityService {
    * @param {number} dailyChartDays - Number of days to include in daily chart (default: 7)
    */
   async getWidgetData(dailyChartDays = 7) {
+    // Check cache first
+    if (this.cache && this.cacheTimestamp && Date.now() - this.cacheTimestamp < this.CACHE_DURATION) {
+      const cacheAge = Math.round((Date.now() - this.cacheTimestamp) / 1000);
+      console.log(`[Électricité] ✅ Données récupérées depuis le cache serveur (âge: ${cacheAge}s)`);
+      return this.cache;
+    }
+    
+    console.log(`[Électricité] 🔄 Appel API réel - cache serveur expiré ou inexistant`);
+
     try {
       const timezone = config.timezone;
       const now = new Date();
@@ -211,6 +247,9 @@ class ElectricityService {
       const daysToFetch = Math.max(7, dailyChartDays);
       const fetchStart = subDays(startOfToday, daysToFetch);
       const dailyData = await this.getDailyConsumption(fetchStart, startOfToday);
+      
+      // Add delay between API calls to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Get daily consumption for the previous week (7-14 days ago)
       let previousWeekData = null;
@@ -363,6 +402,9 @@ class ElectricityService {
         }
       }
 
+      // Add delay before contract call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Get contract info for power info
       let contractInfo = null;
       try {
@@ -428,8 +470,8 @@ class ElectricityService {
         const startOfToday = startOfDay(todayInParis);
         const threeMonthsAgo = startOfMonth(subMonths(startOfToday, 3));
         
-        // Add a delay between API calls to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Add a delay between API calls to respect rate limits (increased to 1 second)
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const yearlyData = await this.getDailyConsumption(threeMonthsAgo, startOfToday);
         monthlyChartData = await this.getMonthlyConsumption(yearlyData);
@@ -459,7 +501,7 @@ class ElectricityService {
         monthlyChartData = [];
       }
 
-      return {
+      const result = {
         today: Math.round(todayConsumption * 100) / 100, // Round to 2 decimals
         yesterday: Math.round(yesterdayConsumption * 100) / 100,
         dayBeforeYesterday: Math.round(dayBeforeYesterdayConsumption * 100) / 100,
@@ -471,8 +513,20 @@ class ElectricityService {
         contractInfo,
         lastUpdate: new Date().toISOString()
       };
+
+      // Update cache
+      this.cache = result;
+      this.cacheTimestamp = Date.now();
+      console.log(`[Électricité] 💾 Données mises en cache serveur (durée: ${this.CACHE_DURATION / 1000 / 60} minutes)`);
+
+      return result;
     } catch (error) {
-      console.error('Error getting widget data:', error);
+      // Only log error if it's been more than ERROR_LOG_INTERVAL since last log
+      const now = Date.now();
+      if (now - this.last409ErrorLogTime > this.ERROR_LOG_INTERVAL) {
+        console.error('Error getting widget data:', error.message);
+        this.last409ErrorLogTime = now;
+      }
       throw error;
     }
   }
