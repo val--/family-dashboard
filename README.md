@@ -1,6 +1,6 @@
-# Family Dashboard
+# Home Dashboard
 
-Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la météo, les événements du calendrier familial depuis Google Calendar et les données de consommation électrique depuis MyElectricalData.
+Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la météo, les événements du calendrier familial depuis Google Calendar, les données de consommation électrique depuis MyElectricalData, les départs de bus, le contrôle des lumières Philips Hue et les actualités.
 
 ## Fonctionnalités
 
@@ -9,11 +9,13 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
   - Prévisions sur 7 jours glissants (aujourd'hui + 6 jours)
   - Ville configurable (par défaut : Rezé)
   - Actualisation automatique
+  - Page météo complète avec détails supplémentaires
 
 - **Widget Calendrier** : Affiche les événements d'un calendrier Google partagé
   - Affiche les événements du jour et des jours à venir
   - Support des événements multi-jours avec heures de début/fin
   - Indicateurs de vacances scolaires
+  - Bouton de rafraîchissement manuel
   - Cliquer sur les événements pour voir les détails complets
   - Page calendrier complète avec tous les événements à venir
 
@@ -24,9 +26,32 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
   - Comparaison hebdomadaire avec la semaine précédente
   - Informations du contrat (puissance souscrite)
 
+- **Widget Bus** : Affiche les prochains départs de bus
+  - Prochains départs depuis un arrêt configuré
+  - Temps d'attente en temps réel
+  - Indicateurs de statut (en temps, retard, etc.)
+  - Actualisation automatique toutes les minutes
+  - Support des arrêts Tan (Nantes)
+
+- **Widget Lumières Philips Hue** : Contrôle des lumières Philips Hue
+  - Affichage du statut des lumières d'une pièce
+  - Contrôle on/off de toutes les lumières
+  - Réglage de la luminosité avec slider
+  - Sélection de scénarios prédéfinis (couleurs et ambiances)
+  - Contrôle individuel de chaque lumière (page détail)
+  - Page détail avec liste complète des lumières et contrôles individuels
+
+- **Widget Actualités** : Fil d'actualités en défilement
+  - Actualités en temps réel depuis newsdata.io
+  - 12 catégories disponibles : Actualités, Tech, Crime, Divertissement, Mode de vie, Monde, National, Éducation, Environnement, Santé, Politique, Tourisme
+  - Sélection de catégorie via menu déroulant
+  - Clic sur une actualité pour voir les détails
+  - QR code pour lire l'article complet sur smartphone
+  - Défilement automatique avec pause au clic
+
 - **Optimisé pour écran tactile** : Interface optimisée pour les écrans tactiles de 7 pouces
-- **Actualisation automatique** : Les données se rafraîchissent toutes les 5 minutes
-- **Navigation multi-pages** : Page d'accueil avec widgets, pages dédiées pour le calendrier et l'électricité
+- **Actualisation automatique** : Les données se rafraîchissent automatiquement (5 min pour la plupart, 1 min pour les bus, 3 sec pour Hue)
+- **Navigation multi-pages** : Page d'accueil avec widgets, pages dédiées pour le calendrier, l'électricité, la météo et les lumières
 
 ## Prérequis
 
@@ -35,6 +60,8 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
 - Compte de service Google avec accès au calendrier
 - Compte MyElectricalData et token (pour le widget électricité)
 - Compte OpenWeatherMap et clé API (pour le widget météo)
+- Pont Philips Hue (pour le widget lumières, optionnel)
+- Clé API newsdata.io (pour le widget actualités, optionnel)
 
 ## Configuration
 
@@ -65,7 +92,27 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
 3. Générez une clé API (gratuite, jusqu'à 1000 appels/jour)
 4. Ajoutez `WEATHER_API_KEY` dans votre fichier `.env`
 
-### 5. Configuration
+### 5. Configuration Bus (optionnel)
+
+1. Trouvez le code de votre arrêt de bus
+2. Vous pouvez utiliser le script `npm run find-bus-stop` pour rechercher un arrêt
+3. Ajoutez `BUS_STOP_ID` et `BUS_STOP_NAME` dans votre fichier `.env`
+
+### 6. Configuration Philips Hue (optionnel)
+
+1. Assurez-vous que votre pont Hue est allumé et connecté au réseau
+2. Notez l'adresse IP de votre pont Hue (accessible via l'application Hue)
+3. Créez une clé d'application Hue en utilisant le script `npm run create-hue-app-key`
+4. Ajoutez `HUE_BRIDGE_IP`, `HUE_APP_KEY` et `HUE_ROOM_NAME` dans votre fichier `.env`
+
+### 7. Configuration Actualités (optionnel)
+
+1. Allez sur [newsdata.io](https://newsdata.io/)
+2. Créez un compte gratuit
+3. Générez une clé API
+4. Ajoutez `NEWSDATA_API_KEY` dans votre fichier `.env`
+
+### 8. Configuration
 
 1. Placez le fichier JSON du compte de service Google téléchargé dans `credentials/service-account.json`
 2. Copiez `.env.example` vers `.env` :
@@ -78,6 +125,15 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
    - `MYELECTRICALDATA_TOKEN` : Votre token MyElectricalData
    - `WEATHER_API_KEY` : Votre clé API OpenWeatherMap (gratuite sur [openweathermap.org](https://openweathermap.org/api))
    - `WEATHER_CITY` : Nom de la ville pour la météo (par défaut : Rezé)
+   - `WEATHER_UNITS` : Unités de température (metric, imperial, kelvin - par défaut : metric)
+   - `WEATHER_LANG` : Langue des descriptions météo (par défaut : fr)
+   - `BUS_STOP_ID` : Code de l'arrêt de bus (optionnel)
+   - `BUS_STOP_NAME` : Nom de l'arrêt de bus (optionnel)
+   - `HUE_BRIDGE_IP` : Adresse IP de votre pont Hue (optionnel)
+   - `HUE_APP_KEY` : Clé d'application Hue (optionnel, générée via script)
+   - `HUE_ROOM_NAME` : Nom de la pièce à contrôler (optionnel, par défaut : Salon)
+   - `NEWSDATA_API_KEY` : Clé API newsdata.io (optionnel)
+   - `NEWS_PAGE_SIZE` : Nombre d'articles à afficher (par défaut : 20)
    - `TIMEZONE` : Votre fuseau horaire (par défaut : Europe/Paris)
 
 Le fichier `.env` est automatiquement chargé et n'est pas commité dans git (il est dans `.gitignore`).
@@ -110,18 +166,40 @@ NODE_ENV=production npm start
 
 La configuration se fait via le fichier `.env` (voir la section Configuration ci-dessus). Les variables suivantes sont disponibles :
 
+### Calendrier
 - `CALENDAR_ID` : Votre ID de calendrier Google
 - `TIMEZONE` : Fuseau horaire (par défaut : Europe/Paris)
 - `MAX_EVENTS` : Nombre maximum d'événements à afficher (vide = pas de limite)
 - `CREDENTIALS_PATH` : Chemin vers le fichier JSON du compte de service Google (par défaut : ./credentials/service-account.json)
+
+### Électricité
 - `MYELECTRICALDATA_PDL` : Votre numéro de point de livraison électrique
 - `MYELECTRICALDATA_TOKEN` : Votre token API MyElectricalData
 - `MYELECTRICALDATA_BASE_URL` : URL de base de l'API MyElectricalData (par défaut : https://www.myelectricaldata.fr)
 - `MYELECTRICALDATA_USE_CACHE` : Utiliser les endpoints de cache pour réduire la charge API (par défaut : true)
+
+### Météo
 - `WEATHER_API_KEY` : Clé API OpenWeatherMap (obligatoire pour le widget météo)
 - `WEATHER_CITY` : Nom de la ville pour la météo (par défaut : Rezé)
 - `WEATHER_UNITS` : Unités de température (metric, imperial, kelvin - par défaut : metric)
 - `WEATHER_LANG` : Langue des descriptions météo (par défaut : fr)
+
+### Bus
+- `BUS_STOP_ID` : Code de l'arrêt de bus (ex: "LHOU" pour "La Houssais" à Rezé)
+- `BUS_STOP_NAME` : Nom de l'arrêt de bus (optionnel, pour affichage)
+
+### Philips Hue
+- `HUE_BRIDGE_IP` : Adresse IP de votre pont Hue (par défaut : 192.168.1.222)
+- `HUE_APP_KEY` : Clé d'application Hue (générée via `npm run create-hue-app-key`)
+- `HUE_ROOM_NAME` : Nom de la pièce à contrôler (par défaut : Salon)
+
+### Actualités
+- `NEWSDATA_API_KEY` : Clé API newsdata.io (obligatoire pour le widget actualités)
+- `NEWS_PAGE_SIZE` : Nombre d'articles à afficher (par défaut : 20)
+
+### Serveur
+- `PORT` : Port du serveur (par défaut : 5000)
+- `NODE_ENV` : Environnement (development ou production)
 
 ## Fonctionnement du cache et des appels API
 
@@ -170,6 +248,14 @@ Le système utilise également un cache pour la météo :
 - **Avantage** : Limite les appels API (gratuit jusqu'à 1000 appels/jour)
 - **Gestion d'erreur** : Les erreurs ne sont loggées qu'une fois toutes les 5 minutes
 
+### API Actualités (newsdata.io)
+
+Le système utilise un cache pour les actualités :
+- **Durée du cache** : 15 minutes
+- **Avantage** : Limite les appels API et améliore les performances
+- **Gestion d'erreur** : Les erreurs ne sont loggées qu'une fois toutes les 5 minutes
+- **Catégories supportées** : Actualités, Tech, Crime, Divertissement, Mode de vie, Monde, National, Éducation, Environnement, Santé, Politique, Tourisme
+
 ## Scripts
 
 - `npm run dev` : Démarrer le serveur de développement (backend + frontend)
@@ -179,6 +265,8 @@ Le système utilise également un cache pour la météo :
 - `npm run find-email` : Obtenir l'email du compte de service depuis les credentials
 - `npm run fetch-events` : Script de test pour récupérer les événements du calendrier
 - `npm run fetch-electricity` : Script de test pour récupérer les données électriques
+- `npm run find-bus-stop` : Script pour rechercher un arrêt de bus par nom
+- `npm run create-hue-app-key` : Script pour créer une clé d'application Hue
 
 ## Déploiement
 
