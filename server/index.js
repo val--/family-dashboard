@@ -41,7 +41,6 @@ app.get('/api/events', async (req, res) => {
 // Electricity API route
 app.get('/api/electricity', async (req, res) => {
   try {
-    // Check if dailyChartDays parameter is provided (for widget with 15 days)
     const dailyChartDays = req.query.dailyChartDays ? parseInt(req.query.dailyChartDays, 10) : 7;
     const data = await electricityService.getWidgetData(dailyChartDays);
     res.json({ data, success: true });
@@ -196,6 +195,45 @@ app.post('/api/hue/room/color', async (req, res) => {
     console.error('Error in /api/hue/room/color:', error);
     res.status(500).json({ 
       error: 'Failed to set Hue room color', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+app.get('/api/hue/room/scenes', async (req, res) => {
+  try {
+    const config = require('./config');
+    const roomName = req.query.room || config.hue.roomName;
+    const result = await hueService.getRoomScenes(roomName);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/room/scenes:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Hue room scenes', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+app.post('/api/hue/scene/activate', async (req, res) => {
+  try {
+    const sceneId = req.body.sceneId;
+    
+    if (!sceneId) {
+      return res.status(400).json({ 
+        error: 'Scene ID is required', 
+        success: false 
+      });
+    }
+    
+    const result = await hueService.activateScene(sceneId);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/scene/activate:', error);
+    res.status(500).json({ 
+      error: 'Failed to activate Hue scene', 
       message: error.message,
       success: false 
     });

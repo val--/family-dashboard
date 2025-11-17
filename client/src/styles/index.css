@@ -2454,8 +2454,8 @@ body {
 
 .hue-color-modal-header h3 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: #2c3e50;
 }
 
@@ -2488,24 +2488,58 @@ body {
 .hue-color-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
 
 .hue-color-item {
   aspect-ratio: 1;
-  border: 3px solid #e9ecef;
+  border: 3px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 28px;
   color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  min-height: 80px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7), 0 0 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  min-height: 100px;
+  padding: 10px 8px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.hue-color-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2), transparent 60%);
+  pointer-events: none;
+  border-radius: 13px;
+}
+
+.hue-scene-name {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+  word-wrap: break-word;
+  max-width: 100%;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.9);
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  backdrop-filter: blur(2px);
 }
 
 .hue-color-item:hover {
@@ -2521,7 +2555,18 @@ body {
 
 .hue-color-selected {
   font-weight: bold;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  font-size: 24px;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.9);
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
 }
 
 @keyframes fadeIn {

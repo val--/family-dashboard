@@ -11,9 +11,9 @@ function HueWidget() {
   const [isToggling, setIsToggling] = useState(false);
   const [roomName, setRoomName] = useState('Salon');
   const [waveAnimation, setWaveAnimation] = useState(null);
-  const [buttonText, setButtonText] = useState(null); // Mémorise le texte pendant l'opération
+  const [buttonText, setButtonText] = useState(null);
   const [isAdjustingBrightness, setIsAdjustingBrightness] = useState(false);
-  const [localBrightness, setLocalBrightness] = useState(null); // Valeur locale du slider
+  const [localBrightness, setLocalBrightness] = useState(null);
   const [showColorModal, setShowColorModal] = useState(false);
 
   // Fetch room name from config on mount
@@ -63,12 +63,15 @@ function HueWidget() {
     }
   }, [roomName]);
 
-  // Synchroniser la luminosité locale avec les données reçues
   useEffect(() => {
-    if (hueData?.status?.brightness !== undefined && localBrightness === null) {
-      setLocalBrightness(hueData.status.brightness);
+    if (hueData?.status?.brightness !== undefined && !isAdjustingBrightness) {
+      if (localBrightness === null) {
+        setLocalBrightness(hueData.status.brightness);
+      } else if (Math.abs(localBrightness - hueData.status.brightness) > 5) {
+        setLocalBrightness(hueData.status.brightness);
+      }
     }
-  }, [hueData, localBrightness]);
+  }, [hueData, localBrightness, isAdjustingBrightness]);
 
   if (loading) {
     return (
@@ -112,14 +115,11 @@ function HueWidget() {
   const { room, status } = hueData;
 
   const handleToggle = async (e) => {
-    e.stopPropagation(); // Prevent navigation when clicking the button
+    e.stopPropagation();
     if (isToggling) return;
     
-    // Mémoriser le texte actuel du bouton
     const currentText = hueData?.status?.anyOn ? 'Éteindre' : 'Allumer';
     setButtonText(currentText);
-    
-    // Determine animation direction based on current state
     const willTurnOn = !hueData?.status?.anyOn;
     setWaveAnimation(willTurnOn ? 'wave-right' : 'wave-left');
     
@@ -143,17 +143,16 @@ function HueWidget() {
     } catch (err) {
       console.error('Error toggling lights:', err);
     } finally {
-      // Disable button for a fixed duration (1 second)
       setTimeout(() => {
         setIsToggling(false);
-        setWaveAnimation(null); // Clear animation after it completes
-        setButtonText(null); // Réinitialiser le texte pour utiliser l'état actuel
+        setWaveAnimation(null);
+        setButtonText(null);
       }, 1000);
     }
   };
 
   const handleBrightnessChange = async (e) => {
-    e.stopPropagation(); // Prevent navigation when dragging the slider
+    e.stopPropagation();
     const newBrightness = parseInt(e.target.value, 10);
     setLocalBrightness(newBrightness);
     setIsAdjustingBrightness(true);
@@ -172,14 +171,12 @@ function HueWidget() {
       
       const result = await response.json();
       if (result.success) {
-        // Refresh data after brightness change
         setTimeout(() => {
           fetchHueData();
         }, 300);
       }
     } catch (err) {
       console.error('Error setting brightness:', err);
-      // Revert to previous value on error
       if (hueData?.status?.brightness !== undefined) {
         setLocalBrightness(hueData.status.brightness);
       }
@@ -197,9 +194,9 @@ function HueWidget() {
         style={status.color && status.anyOn ? { '--hue-color': status.color } : {}}
       >
         <h2 className="hue-widget-title">💡 {room.name}</h2>
-        <div className="hue-widget-header-count">
-          {status.lightsOn} / {status.lightsCount}
-        </div>
+              <div className="hue-widget-header-count">
+                 {status.lightsOn} / {status.lightsCount} lumières
+               </div>
       </div>
       <div className="hue-widget-content">
         <div className="hue-status">
@@ -258,31 +255,13 @@ function HueWidget() {
         <HueColorModal
           currentColor={status.color}
           currentColorXY={status.colorXY}
+          roomName={roomName}
           onClose={() => setShowColorModal(false)}
-          onColorSelect={async (xy) => {
-            try {
-              const response = await fetch('/api/hue/room/color', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                  room: roomName,
-                  xy: xy
-                }),
-              });
-              
-              const result = await response.json();
-              if (result.success) {
-                // Refresh data after color change
-                setTimeout(() => {
-                  fetchHueData();
-                }, 300);
-                setShowColorModal(false);
-              }
-            } catch (err) {
-              console.error('Error setting color:', err);
-            }
+          onSceneSelect={async (scene) => {
+            setLocalBrightness(null);
+            setTimeout(() => {
+              fetchHueData();
+            }, 800);
           }}
         />
       )}

@@ -62,7 +62,6 @@ function makeRequest(url) {
 }
 
 async function getBusData() {
-  // Check cache
   if (busCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
     return busCache;
   }
@@ -133,7 +132,6 @@ async function getBusData() {
       lastUpdate: new Date().toISOString(),
     };
 
-    // Update cache
     busCache = result;
     cacheTimestamp = Date.now();
 

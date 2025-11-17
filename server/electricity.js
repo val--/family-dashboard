@@ -28,7 +28,6 @@ class ElectricityService {
 
       return response.data;
     } catch (error) {
-      // Only log error if it's not a 409 (handled separately) or if enough time has passed
       const now = Date.now();
       if (error.response?.status !== 409 && (now - this.last409ErrorLogTime > this.ERROR_LOG_INTERVAL)) {
         console.error('Error fetching from MyElectricalData API:', error.message);
@@ -37,22 +36,17 @@ class ElectricityService {
         const status = error.response.status;
         const statusText = error.response.statusText;
         
-        // Handle 409 Conflict (rate limiting) with retry
         if (status === 409 && retries > 0) {
           const now = Date.now();
           if (now - this.last409ErrorLogTime > this.ERROR_LOG_INTERVAL) {
-            console.log(`Rate limit hit (409), retrying in 3 seconds... (${retries} retries left)`);
             this.last409ErrorLogTime = now;
           }
-          // Increase delay to 3 seconds for 409 errors
           await new Promise(resolve => setTimeout(resolve, 3000));
           return this.fetchFromAPI(endpoint, retries - 1);
         }
         
-        // Handle 429 Too Many Requests
         if (status === 429 && retries > 0) {
           const retryAfter = error.response.headers['retry-after'] || 5;
-          console.log(`Rate limit hit (429), retrying after ${retryAfter} seconds... (${retries} retries left)`);
           await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
           return this.fetchFromAPI(endpoint, retries - 1);
         }

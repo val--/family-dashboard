@@ -18,7 +18,9 @@
     "fetch-hue-devices": "node scripts/fetch-hue-devices.js",
     "create-hue-app-key": "node scripts/create-hue-app-key.js",
     "check-hue-room": "node scripts/check-hue-room.js",
-    "check-hue-gamut": "node scripts/check-hue-gamut.js"
+    "check-hue-gamut": "node scripts/check-hue-gamut.js",
+    "check-hue-scenes": "node scripts/check-hue-scenes.js",
+    "check-hue-scene-images": "node scripts/check-hue-scene-images.js"
   },
   "keywords": [
     "calendar",
