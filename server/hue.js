@@ -475,6 +475,50 @@ async function toggleRoomLights(roomName = 'Salon', turnOn = null) {
   }
 }
 
+async function toggleLight(lightId, turnOn = null) {
+  try {
+    if (!HUE_APP_KEY) {
+      throw new Error('HUE_APP_KEY not configured');
+    }
+
+    if (!lightId) {
+      throw new Error('Light ID is required');
+    }
+
+    let targetState = turnOn;
+
+    if (targetState === null) {
+      const lightUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+      const lightResponse = await makeRequest(lightUrl);
+      const light = lightResponse.data?.[0];
+
+      if (!light) {
+        throw new Error(`Light ${lightId} not found`);
+      }
+
+      targetState = !light.on?.on;
+    }
+
+    const updateUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+    await makeRequest(updateUrl, {
+      method: 'PUT',
+      body: {
+        on: {
+          on: !!targetState
+        }
+      }
+    });
+
+    hueCache = null;
+    cacheTimestamp = null;
+
+    return { success: true, lightId, on: !!targetState };
+  } catch (error) {
+    console.error('[Hue] ❌ Erreur lors du toggle d\'une lumière:', error.message);
+    throw error;
+  }
+}
+
 async function setRoomBrightness(roomName = 'Salon', brightness) {
   try {
     if (!HUE_APP_KEY) {
@@ -724,6 +768,7 @@ async function activateScene(sceneId) {
 module.exports = {
   getRoomStatus,
   toggleRoomLights,
+  toggleLight,
   setRoomBrightness,
   setRoomColor,
   getRoomScenes,

@@ -151,6 +151,29 @@ app.post('/api/hue/room/toggle', async (req, res) => {
   }
 });
 
+app.post('/api/hue/light/toggle', async (req, res) => {
+  try {
+    const { lightId, turnOn } = req.body || {};
+
+    if (!lightId) {
+      return res.status(400).json({
+        error: 'Light ID is required',
+        success: false
+      });
+    }
+
+    const result = await hueService.toggleLight(lightId, typeof turnOn === 'boolean' ? turnOn : null);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/light/toggle:', error);
+    res.status(500).json({
+      error: 'Failed to toggle Hue light',
+      message: error.message,
+      success: false
+    });
+  }
+});
+
 app.post('/api/hue/room/brightness', async (req, res) => {
   try {
     const config = require('./config');

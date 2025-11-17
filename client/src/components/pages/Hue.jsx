@@ -15,6 +15,7 @@ function Hue() {
   const [isAdjustingBrightness, setIsAdjustingBrightness] = useState(false);
   const [localBrightness, setLocalBrightness] = useState(null);
   const [showColorModal, setShowColorModal] = useState(false);
+  const [pendingLights, setPendingLights] = useState({});
 
   // Fetch room name from config on mount
   useEffect(() => {
@@ -140,6 +141,41 @@ function Hue() {
     }
   };
 
+  const handleLightToggle = async (lightId, targetState) => {
+    if (!lightId || pendingLights[lightId]) return;
+
+    setPendingLights((prev) => ({ ...prev, [lightId]: true }));
+    try {
+      const response = await fetch('/api/hue/light/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lightId,
+          turnOn: targetState,
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to toggle light');
+      }
+
+      setTimeout(() => {
+        fetchHueData();
+      }, 400);
+    } catch (err) {
+      console.error('Error toggling light:', err);
+    } finally {
+      setPendingLights((prev) => {
+        const updated = { ...prev };
+        delete updated[lightId];
+        return updated;
+      });
+    }
+  };
+
   const handleBrightnessChange = async (e) => {
     const newBrightness = parseInt(e.target.value, 10);
     setLocalBrightness(newBrightness);
@@ -249,6 +285,18 @@ function Hue() {
                   {light.on && (
                     <div className="hue-light-brightness">{light.brightness}%</div>
                   )}
+                  <button
+                    className={`hue-light-toggle ${light.on ? 'on' : 'off'}`}
+                    onClick={() => handleLightToggle(light.id, !light.on)}
+                    disabled={!!pendingLights[light.id]}
+                    type="button"
+                  >
+                    {pendingLights[light.id]
+                      ? '...'
+                      : light.on
+                        ? 'Éteindre'
+                        : 'Allumer'}
+                  </button>
                 </div>
               ))}
             </div>
