@@ -15,12 +15,7 @@
     "fetch-electricity": "node scripts/fetch-electricity.js",
     "fetch-news": "node scripts/fetch-news.js",
     "find-bus-stop": "node scripts/find-bus-stop.js",
-    "fetch-hue-devices": "node scripts/fetch-hue-devices.js",
-    "create-hue-app-key": "node scripts/create-hue-app-key.js",
-    "check-hue-room": "node scripts/check-hue-room.js",
-    "check-hue-gamut": "node scripts/check-hue-gamut.js",
-    "check-hue-scenes": "node scripts/check-hue-scenes.js",
-    "check-hue-scene-images": "node scripts/check-hue-scene-images.js"
+    "create-hue-app-key": "node scripts/create-hue-app-key.js"
   },
   "keywords": [
     "calendar",
