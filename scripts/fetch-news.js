@@ -92,13 +92,14 @@ async function testNewsAPI() {
   try {
     let url;
     
-    // Test avec /top-headlines pour France
-    console.log('🚀 Démarrage du test avec endpoint /top-headlines (country=fr)...\n');
-    url = `https://newsapi.org/v2/top-headlines?country=fr&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
+    // Test avec /everything pour France (société, fait divers)
+    console.log('🚀 Démarrage du test avec endpoint /everything (société, fait divers)...\n');
+    const query = '(France OR français OR Paris OR Lyon OR Marseille) AND (société OR "fait divers" OR "faits divers" OR justice OR police OR tribunal OR enquête OR accident OR événement OR actualité OR nouvelles OR faits OR affaire) -guerre -Ukraine -international -nucleaire -nucléaire -IPTV -technologie -tech';
+    url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
     
-    // Alternative: test avec /everything
-    // console.log('🚀 Démarrage du test avec endpoint /everything (filtre langue)...\n');
-    // url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
+    // Alternative: test avec /top-headlines
+    // console.log('🚀 Démarrage du test avec endpoint /top-headlines (country=fr)...\n');
+    // url = `https://newsapi.org/v2/top-headlines?country=fr&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
     
     const newsData = await makeRequest(url);
 

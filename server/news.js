@@ -1,11 +1,6 @@
 const https = require('https');
-const config = require('./config');
 
-const NEWS_API_KEY = process.env.NEWS_API_KEY || '';
-const NEWS_COUNTRY = process.env.NEWS_COUNTRY || 'fr'; // 2-letter ISO 3166-1 code (fr = France)
-const NEWS_CATEGORY = process.env.NEWS_CATEGORY || ''; // Optional: business, entertainment, general, health, science, sports, technology
-const NEWS_LANGUAGE = process.env.NEWS_LANGUAGE || 'fr'; // Language code (fr = French) - only used with /everything endpoint
-const NEWS_USE_EVERYTHING = process.env.NEWS_USE_EVERYTHING !== 'false'; // Use /everything endpoint by default (true) to ensure French language filtering
+const NEWSDATA_API_KEY = process.env.NEWSDATA_API_KEY || '';
 const NEWS_PAGE_SIZE = parseInt(process.env.NEWS_PAGE_SIZE || '20', 10);
 
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
@@ -42,7 +37,7 @@ function makeRequest(url) {
             reject(new Error('Failed to parse news data'));
           }
         } else {
-          let errorMessage = `News API returned status ${res.statusCode}`;
+          let errorMessage = `NewsData API returned status ${res.statusCode}`;
           try {
             const errorData = JSON.parse(data);
             if (errorData.message) {
@@ -64,53 +59,88 @@ function makeRequest(url) {
   });
 }
 
-async function getNewsData(newsType = 'france') {
-  if (!NEWS_API_KEY) {
-    throw new Error('NEWS_API_KEY is not configured');
-  }
-
+async function getNewsData(newsType = 'news') {
   // Check cache
   if (newsCache && newsCache.type === newsType && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
     return newsCache.data;
   }
 
   try {
-    // Build API URL based on news type
     let url;
-    if (newsType === 'france') {
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France OR français OR Paris OR gouvernement français OR politique française')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
-    } else if (newsType === 'monde') {
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('international OR world OR global -France')}&language=en&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
-    } else if (newsType === 'tech') {
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('technology tech')}&language=en&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
-    } else {
-      url = `https://newsapi.org/v2/everything?q=${encodeURIComponent('France OR français OR Paris OR gouvernement français OR politique française')}&language=${NEWS_LANGUAGE}&sortBy=publishedAt&pageSize=${NEWS_PAGE_SIZE}&apiKey=${NEWS_API_KEY}`;
+    let newsData;
+    
+    if (!NEWSDATA_API_KEY) {
+      throw new Error('NEWSDATA_API_KEY is not configured');
     }
     
-    const newsData = await makeRequest(url);
-
-    if (newsData.status !== 'ok') {
-      throw new Error(`News API returned invalid status: ${newsData.status}${newsData.message ? ` - ${newsData.message}` : ''}`);
+    // Build API URL based on news type
+    if (newsType === 'news') {
+      // Actualités françaises (top)
+      url = `https://newsdata.io/api/1/latest?country=fr&language=fr&category=top&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'tech') {
+      // Actualités tech
+      url = `https://newsdata.io/api/1/latest?category=Technology&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'crime') {
+      // Actualités crime
+      url = `https://newsdata.io/api/1/latest?category=Crime&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'entertainment') {
+      // Actualités entertainment
+      url = `https://newsdata.io/api/1/latest?category=Entertainment&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'lifestyle') {
+      // Actualités lifestyle
+      url = `https://newsdata.io/api/1/latest?category=Lifestyle&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'world') {
+      // Actualités world
+      url = `https://newsdata.io/api/1/latest?category=World&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'domestic') {
+      // Actualités domestic
+      url = `https://newsdata.io/api/1/latest?category=Domestic&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'education') {
+      // Actualités education
+      url = `https://newsdata.io/api/1/latest?category=Education&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'environment') {
+      // Actualités environment
+      url = `https://newsdata.io/api/1/latest?category=Environment&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'health') {
+      // Actualités health
+      url = `https://newsdata.io/api/1/latest?category=Health&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'politics') {
+      // Actualités politics
+      url = `https://newsdata.io/api/1/latest?category=Politics&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else if (newsType === 'tourism') {
+      // Actualités tourism
+      url = `https://newsdata.io/api/1/latest?category=Tourism&language=fr&apikey=${NEWSDATA_API_KEY}`;
+    } else {
+      // Par défaut, actualités françaises
+      url = `https://newsdata.io/api/1/latest?country=fr&language=fr&category=top&apikey=${NEWSDATA_API_KEY}`;
     }
-
-    // Process articles
-    const articles = (newsData.articles || [])
+    
+    newsData = await makeRequest(url);
+    
+    // newsdata.io retourne 'status: success' et 'results' au lieu de 'articles'
+    if (newsData.status !== 'success') {
+      throw new Error(`NewsData API returned invalid status: ${newsData.status}${newsData.message ? ` - ${newsData.message}` : ''}`);
+    }
+    
+    // Process articles from newsdata.io format
+    // Documentation: https://newsdata.io/documentation#response-object
+    const articles = (newsData.results || [])
       .map((article) => ({
         title: article.title || 'Sans titre',
         description: article.description || '',
-        source: article.source?.name || 'Source inconnue',
-        url: article.url || '',
-        urlToImage: article.urlToImage || null,
-        author: article.author || null,
+        source: article.source_name || article.source_id || 'Source inconnue',
+        url: article.link || '',
+        urlToImage: article.image_url || null,
+        author: article.creator?.[0] || article.creator || null,
         content: article.content || null,
-        publishedAt: article.publishedAt || new Date().toISOString(),
+        publishedAt: article.pubDate || new Date().toISOString(),
         cleanTitle: (article.title || '').replace(/\s*\[.*?\]\s*/g, '').trim() || 'Sans titre',
       }))
       .filter((article) => article.cleanTitle !== 'Sans titre' && article.cleanTitle.length > 0);
 
     const result = {
       articles,
-      totalResults: newsData.totalResults || 0,
+      totalResults: newsData.totalResults || articles.length,
       lastUpdate: new Date().toISOString(),
     };
 

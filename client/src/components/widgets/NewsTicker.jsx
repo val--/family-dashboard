@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { REFRESH_INTERVAL } from '../../constants';
 
 function NewsTicker() {
@@ -7,7 +8,7 @@ function NewsTicker() {
   const [error, setError] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState(null);
-  const [newsType, setNewsType] = useState('france'); // 'france', 'monde', 'tech'
+  const [newsType, setNewsType] = useState('news'); // 'news', 'tech', 'crime', 'entertainment', 'lifestyle', 'world', 'domestic', 'education', 'environment', 'health', 'politics', 'tourism'
   const [showNewsTypeMenu, setShowNewsTypeMenu] = useState(false);
   const [animationDuration, setAnimationDuration] = useState(360); // Default duration for constant speed
   const tickerRef = useRef(null);
@@ -17,12 +18,30 @@ function NewsTicker() {
 
   const getNewsTypeLabel = () => {
     switch (newsType) {
-      case 'france':
-        return 'France';
-      case 'monde':
-        return 'Monde';
+      case 'news':
+        return 'Actualités';
       case 'tech':
         return 'Tech';
+      case 'crime':
+        return 'Crime';
+      case 'entertainment':
+        return 'Divertissement';
+      case 'lifestyle':
+        return 'Mode de vie';
+      case 'world':
+        return 'Monde';
+      case 'domestic':
+        return 'National';
+      case 'education':
+        return 'Éducation';
+      case 'environment':
+        return 'Environnement';
+      case 'health':
+        return 'Santé';
+      case 'politics':
+        return 'Politique';
+      case 'tourism':
+        return 'Tourisme';
       default:
         return 'Actualités';
     }
@@ -277,6 +296,12 @@ function NewsTicker() {
     }
   };
 
+  const handleCloseModal = () => {
+    setIsPaused(false);
+    setSelectedArticle(null);
+  };
+
+
   const handleNewsTypeClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -358,26 +383,15 @@ function NewsTicker() {
               onTouchEnd={(e) => e.stopPropagation()}
             >
               <div 
-                className={`news-ticker-type-option ${newsType === 'france' ? 'active' : ''}`}
-                onClick={(e) => handleNewsTypeSelect('france', e)}
+                className={`news-ticker-type-option ${newsType === 'news' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('news', e)}
                 onTouchEnd={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleNewsTypeSelect('france', e);
+                  handleNewsTypeSelect('news', e);
                 }}
               >
-                🇫🇷 France
-              </div>
-              <div 
-                className={`news-ticker-type-option ${newsType === 'monde' ? 'active' : ''}`}
-                onClick={(e) => handleNewsTypeSelect('monde', e)}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleNewsTypeSelect('monde', e);
-                }}
-              >
-                🌍 Monde
+                📰 Actualités
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'tech' ? 'active' : ''}`}
@@ -389,6 +403,116 @@ function NewsTicker() {
                 }}
               >
                 💻 Tech
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'crime' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('crime', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('crime', e);
+                }}
+              >
+                🚨 Crime
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'entertainment' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('entertainment', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('entertainment', e);
+                }}
+              >
+                🎬 Divertissement
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'lifestyle' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('lifestyle', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('lifestyle', e);
+                }}
+              >
+                🌸 Mode de vie
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'world' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('world', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('world', e);
+                }}
+              >
+                🌍 Monde
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'domestic' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('domestic', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('domestic', e);
+                }}
+              >
+                🏠 National
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'education' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('education', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('education', e);
+                }}
+              >
+                📚 Éducation
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'environment' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('environment', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('environment', e);
+                }}
+              >
+                🌱 Environnement
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'health' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('health', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('health', e);
+                }}
+              >
+                🏥 Santé
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'politics' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('politics', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('politics', e);
+                }}
+              >
+                🏛️ Politique
+              </div>
+              <div 
+                className={`news-ticker-type-option ${newsType === 'tourism' ? 'active' : ''}`}
+                onClick={(e) => handleNewsTypeSelect('tourism', e)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNewsTypeSelect('tourism', e);
+                }}
+              >
+                ✈️ Tourisme
               </div>
             </div>
           )}
@@ -418,7 +542,7 @@ function NewsTicker() {
               <h2 className="news-modal-title">{selectedArticle.cleanTitle || selectedArticle.title}</h2>
               <button 
                 className="news-modal-close"
-                onClick={() => { setIsPaused(false); setSelectedArticle(null); }}
+                onClick={handleCloseModal}
               >
                 ×
               </button>
@@ -446,11 +570,6 @@ function NewsTicker() {
                   <p>{selectedArticle.description}</p>
                 </div>
               )}
-              {selectedArticle.content && (
-                <div className="news-modal-content-text">
-                  <p>{selectedArticle.content}</p>
-                </div>
-              )}
               {selectedArticle.publishedAt && (
                 <div className="news-modal-date">
                   <small>
@@ -462,6 +581,19 @@ function NewsTicker() {
                       minute: '2-digit'
                     })}
                   </small>
+                </div>
+              )}
+              {selectedArticle.url && (
+                <div className="news-modal-qr">
+                  <p className="news-modal-qr-label">Scanner pour lire l'article complet :</p>
+                  <div className="news-modal-qr-code">
+                    <QRCodeSVG
+                      value={selectedArticle.url}
+                      size={200}
+                      level="M"
+                      includeMargin={true}
+                    />
+                  </div>
                 </div>
               )}
             </div>

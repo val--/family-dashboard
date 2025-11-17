@@ -72,7 +72,7 @@ app.get('/api/weather', async (req, res) => {
 // News API route
 app.get('/api/news', async (req, res) => {
   try {
-    const newsType = req.query.type || 'france'; // 'france', 'monde', 'tech'
+    const newsType = req.query.type || 'news'; // 'news', 'tech', 'crime', 'entertainment', 'lifestyle', 'world', 'domestic', 'education', 'environment', 'health', 'politics', 'tourism'
     const data = await newsService.getNewsData(newsType);
     res.json({ data, success: true });
   } catch (error) {
