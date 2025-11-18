@@ -5,8 +5,10 @@ import Home from './components/pages/Home';
 import Electricity from './components/pages/Electricity';
 import Weather from './components/pages/Weather';
 import Hue from './components/pages/Hue';
+import Screensaver from './components/common/Screensaver';
+import { useScreensaver } from './hooks/useScreensaver';
 
-import { API_URL, REFRESH_INTERVAL } from './constants';
+import { API_URL, REFRESH_INTERVAL, SCREENSAVER_IDLE_TIME } from './constants';
 
 function CalendarPage() {
   const [events, setEvents] = useState([]);
@@ -378,8 +380,12 @@ function HuePage() {
 }
 
 function App() {
+  // Activer l'écran de veille après le délai d'inactivité configuré
+  const isScreensaverActive = useScreensaver(SCREENSAVER_IDLE_TIME);
+
   return (
     <Router>
+      {isScreensaverActive && <Screensaver />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<CalendarPage />} />
