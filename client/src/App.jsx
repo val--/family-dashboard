@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
-import Home from './components/pages/Home';
+import DashboardPages from './components/common/DashboardPages';
 import Electricity from './components/pages/Electricity';
 import Weather from './components/pages/Weather';
 import Hue from './components/pages/Hue';
@@ -387,7 +387,7 @@ function App() {
     <Router>
       {isScreensaverActive && <Screensaver onExit={registerActivity} />}
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<DashboardPages />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/electricity" element={<ElectricityPage />} />
         <Route path="/weather" element={<WeatherPage />} />

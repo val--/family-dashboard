@@ -32,5 +32,10 @@ module.exports = {
     bridgeIp: process.env.HUE_BRIDGE_IP || '192.168.1.222',
     appKey: process.env.HUE_APP_KEY || '',
     roomName: process.env.HUE_ROOM_NAME || 'Salon' // Nom de la pièce à contrôler (ex: Salon, Bureau)
+  },
+  spotify: {
+    clientId: process.env.SPOTIFY_CLIENT_ID || '',
+    clientSecret: process.env.SPOTIFY_CLIENT_SECRET || '',
+    redirectUri: process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:5000/api/spotify/callback'
   }
 };

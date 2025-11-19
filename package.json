@@ -15,7 +15,8 @@
     "fetch-electricity": "node scripts/fetch-electricity.js",
     "fetch-news": "node scripts/fetch-news.js",
     "find-bus-stop": "node scripts/find-bus-stop.js",
-    "create-hue-app-key": "node scripts/create-hue-app-key.js"
+    "create-hue-app-key": "node scripts/create-hue-app-key.js",
+    "test-tplink": "node scripts/test-tplink.js"
   },
   "keywords": [
     "calendar",

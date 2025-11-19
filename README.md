@@ -49,6 +49,13 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
   - QR code pour lire l'article complet sur smartphone
   - Défilement automatique avec pause au clic
 
+- **Widget Spotify** : Affichage et contrôle de la musique Spotify (page 2)
+  - Affiche le morceau actuellement joué avec pochette d'album
+  - Contrôles de lecture : Play/Pause et morceau suivant
+  - Authentification OAuth via Spotify
+  - Actualisation automatique toutes les 5 secondes
+  - Positionné en haut à gauche de la page 2 (quart de l'écran)
+
 - **Optimisé pour écran tactile** : Interface optimisée pour les écrans tactiles de 7 pouces
 - **Actualisation automatique** : Les données se rafraîchissent automatiquement (5 min pour la plupart, 1 min pour les bus, 3 sec pour Hue)
 - **Navigation multi-pages** : Page d'accueil avec widgets, pages dédiées pour le calendrier, l'électricité, la météo et les lumières
@@ -62,6 +69,7 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
 - Compte OpenWeatherMap et clé API (pour le widget météo)
 - Pont Philips Hue (pour le widget lumières, optionnel)
 - Clé API newsdata.io (pour le widget actualités, optionnel)
+- Compte Spotify Developer et application créée (pour le widget Spotify, optionnel)
 
 ## Configuration
 
@@ -112,7 +120,25 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
 3. Générez une clé API
 4. Ajoutez `NEWSDATA_API_KEY` dans votre fichier `.env`
 
-### 8. Configuration
+### 8. Configuration Spotify (optionnel)
+
+1. Allez sur [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Créez une nouvelle application :
+   - **App name** : `home-dashboard` (ou le nom de votre choix)
+   - **App description** : Description de votre choix
+   - **Website** : Optionnel, laissez vide ou mettez une URL locale
+   - **Redirect URIs** : **Important** - Ajoutez `http://localhost:5000/api/spotify/callback` (ou le port de votre serveur)
+   - **Which API/SDKs are you planning to use?** : Cochez **Web API**
+   - Acceptez les termes et conditions
+   - Cliquez sur **Save**
+3. Après la création, vous obtiendrez :
+   - **Client ID** : À ajouter dans `.env` comme `SPOTIFY_CLIENT_ID`
+   - **Client Secret** : À ajouter dans `.env` comme `SPOTIFY_CLIENT_SECRET`
+4. Optionnel : Vous pouvez personnaliser le redirect URI avec `SPOTIFY_REDIRECT_URI` dans `.env` (par défaut : `http://localhost:5000/api/spotify/callback`)
+
+**Note** : Pour utiliser le widget Spotify, vous devrez vous authentifier une première fois en cliquant sur "Se connecter" dans le widget. Cela ouvrira une fenêtre d'authentification Spotify.
+
+### 9. Configuration
 
 1. Placez le fichier JSON du compte de service Google téléchargé dans `credentials/service-account.json`
 2. Copiez `.env.example` vers `.env` :
@@ -196,6 +222,11 @@ La configuration se fait via le fichier `.env` (voir la section Configuration ci
 ### Actualités
 - `NEWSDATA_API_KEY` : Clé API newsdata.io (obligatoire pour le widget actualités)
 - `NEWS_PAGE_SIZE` : Nombre d'articles à afficher (par défaut : 20)
+
+### Spotify (optionnel)
+- `SPOTIFY_CLIENT_ID` : Client ID de votre application Spotify
+- `SPOTIFY_CLIENT_SECRET` : Client Secret de votre application Spotify
+- `SPOTIFY_REDIRECT_URI` : URI de redirection OAuth (par défaut : `http://localhost:5000/api/spotify/callback`)
 
 ### Serveur
 - `PORT` : Port du serveur (par défaut : 5000)

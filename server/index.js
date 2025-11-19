@@ -10,6 +10,7 @@ const weatherService = require('./weather');
 const newsService = require('./news');
 const busService = require('./bus');
 const hueService = require('./hue');
+const spotifyService = require('./spotify');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -263,9 +264,239 @@ app.post('/api/hue/scene/activate', async (req, res) => {
   }
 });
 
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// Spotify API routes
+app.get('/api/spotify/auth', (req, res) => {
+  try {
+    const authUrl = spotifyService.getAuthorizationUrl();
+    res.json({ authUrl, success: true });
+  } catch (error) {
+    console.error('Error generating Spotify auth URL:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.get('/api/spotify/callback', async (req, res) => {
+  const code = req.query.code;
+  const error = req.query.error;
+
+  if (error) {
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Erreur d'authentification Spotify</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              background: #f5f5f5;
+            }
+            .container {
+              text-align: center;
+              padding: 20px;
+              background: white;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Erreur d'authentification Spotify</h1>
+            <p>${error}</p>
+            <p>Vous pouvez fermer cette fenêtre.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  if (!code) {
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Erreur</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              background: #f5f5f5;
+            }
+            .container {
+              text-align: center;
+              padding: 20px;
+              background: white;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Erreur</h1>
+            <p>Aucun code d'autorisation reçu.</p>
+            <p>Vous pouvez fermer cette fenêtre.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  try {
+    const tokens = await spotifyService.exchangeCodeForToken(code);
+    spotifyService.setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn);
+    
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Authentification réussie</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              background: #1db954;
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 20px;
+            }
+            h1 {
+              margin-bottom: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>✓ Authentification Spotify réussie !</h1>
+            <p>Vous pouvez maintenant fermer cette fenêtre et retourner au dashboard.</p>
+            <script>
+              // Notifier la fenêtre parente si elle existe
+              if (window.opener) {
+                window.opener.postMessage('spotify-auth-success', '*');
+              }
+              setTimeout(() => {
+                window.close();
+              }, 2000);
+            </script>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error exchanging Spotify code:', error);
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Erreur d'authentification</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              background: #f5f5f5;
+            }
+            .container {
+              text-align: center;
+              padding: 20px;
+              background: white;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Erreur d'authentification</h1>
+            <p>${error.message}</p>
+            <p>Vous pouvez fermer cette fenêtre.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+});
+
+app.get('/api/spotify/status', async (req, res) => {
+  try {
+    if (!spotifyService.isAuthenticated()) {
+      return res.json({ authenticated: false, success: true });
+    }
+
+    const playback = await spotifyService.getCurrentlyPlaying();
+    res.json({ ...playback, authenticated: true, success: true });
+  } catch (error) {
+    console.error('Error fetching Spotify status:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/play', async (req, res) => {
+  try {
+    const result = await spotifyService.resumePlayback();
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error resuming Spotify playback:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/pause', async (req, res) => {
+  try {
+    const result = await spotifyService.pausePlayback();
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error pausing Spotify playback:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/next', async (req, res) => {
+  try {
+    const result = await spotifyService.skipToNext();
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error skipping to next track:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/previous', async (req, res) => {
+  try {
+    const result = await spotifyService.skipToPrevious();
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error skipping to previous track:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
 });
 
 // Serve static files in production
