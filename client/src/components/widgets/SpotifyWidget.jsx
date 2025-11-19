@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { QRCodeSVG } from 'qrcode.react';
 
 /**
  * Widget Spotify pour afficher le morceau actuellement joué
@@ -21,12 +22,38 @@ function SpotifyWidget() {
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [playlistTracks, setPlaylistTracks] = useState([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [activeUser, setActiveUser] = useState(null);
+  const [activeUserId, setActiveUserId] = useState(null);
+  const [showUserSelector, setShowUserSelector] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrUrl, setQrUrl] = useState(null);
+  const [loadingQR, setLoadingQR] = useState(false);
+
+  // Récupérer la liste des utilisateurs
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/spotify/users');
+      const data = await response.json();
+
+      if (data.success) {
+        setUsers(data.users || []);
+        setActiveUser(data.activeUser);
+        if (data.activeUser) {
+          setActiveUserId(data.activeUser.id);
+        }
+      }
+    } catch (err) {
+      console.error('Erreur lors de la récupération des utilisateurs:', err);
+    }
+  }, []);
 
   // Vérifier l'authentification et récupérer le statut
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (userId = null) => {
     try {
       setError(null);
-      const response = await fetch('/api/spotify/status');
+      const url = userId ? `/api/spotify/status?userId=${userId}` : '/api/spotify/status';
+      const response = await fetch(url);
       const data = await response.json();
 
       if (!data.success) {
@@ -41,6 +68,11 @@ function SpotifyWidget() {
         // Si on a récupéré un track, on n'est plus en train de lancer
         if (data.track) {
           setIsStartingPlayback(false);
+        }
+        // Mettre à jour l'utilisateur actif si fourni
+        if (data.activeUser) {
+          setActiveUser(data.activeUser);
+          setActiveUserId(data.activeUser.id);
         }
       }
     } catch (err) {
@@ -62,27 +94,30 @@ function SpotifyWidget() {
       if (data.success && data.authUrl) {
         // Ouvrir la fenêtre d'authentification
         const authWindow = window.open(data.authUrl, 'spotify-auth', 'width=500,height=600');
-        
+
         // Écouter les messages de la fenêtre popup
         const messageHandler = (event) => {
           if (event.data === 'spotify-auth-success') {
+            fetchUsers();
             fetchStatus();
             window.removeEventListener('message', messageHandler);
           }
         };
         window.addEventListener('message', messageHandler);
-        
+
         // Vérifier périodiquement si l'authentification a réussi
         const checkInterval = setInterval(async () => {
           if (authWindow.closed) {
             clearInterval(checkInterval);
             window.removeEventListener('message', messageHandler);
-            // Vérifier une dernière fois le statut
+            // Vérifier une dernière fois le statut et les utilisateurs
+            await fetchUsers();
             await fetchStatus();
             return;
           }
           
-          // Vérifier le statut d'authentification
+          // Vérifier le statut d'authentification et les utilisateurs
+          await fetchUsers();
           await fetchStatus();
           if (isAuthenticated) {
             clearInterval(checkInterval);
@@ -92,7 +127,7 @@ function SpotifyWidget() {
             }
           }
         }, 2000);
-        
+
         // Arrêter de vérifier après 5 minutes
         setTimeout(() => {
           clearInterval(checkInterval);
@@ -105,20 +140,88 @@ function SpotifyWidget() {
     }
   };
 
+  // Changer d'utilisateur actif
+  const handleSwitchUser = async (userId) => {
+    try {
+      const response = await fetch('/api/spotify/users/active', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setActiveUserId(userId);
+        await fetchUsers();
+        await fetchStatus(userId);
+        setShowUserSelector(false);
+      }
+    } catch (err) {
+      console.error('Erreur lors du changement d\'utilisateur:', err);
+      setError(err.message);
+    }
+  };
+
+  // Supprimer un utilisateur
+  const handleRemoveUser = async (userId) => {
+    try {
+      const response = await fetch(`/api/spotify/users/${userId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        await fetchUsers();
+        // Si l'utilisateur supprimé était actif, recharger le statut
+        if (activeUserId === userId) {
+          await fetchStatus();
+        }
+      }
+    } catch (err) {
+      console.error('Erreur lors de la suppression de l\'utilisateur:', err);
+      setError(err.message);
+    }
+  };
+
+  // Générer un QR code pour ajouter un utilisateur
+  const handleGenerateQR = async () => {
+    try {
+      setLoadingQR(true);
+      const response = await fetch('/api/spotify/qr-token');
+      const data = await response.json();
+
+      if (data.success && data.qrUrl) {
+        setQrUrl(data.qrUrl);
+        setShowQRCode(true);
+      } else {
+        setError(data.error || 'Failed to generate QR code');
+      }
+    } catch (err) {
+      console.error('Erreur lors de la génération du QR code:', err);
+      setError(err.message);
+    } finally {
+      setLoadingQR(false);
+    }
+  };
+
   // Contrôles de lecture
   const handlePlay = async () => {
     if (isTransitioning) return;
     
     setIsTransitioning(true);
     try {
-      const response = await fetch('/api/spotify/play', { method: 'POST' });
+      const response = await fetch('/api/spotify/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: activeUserId })
+      });
       const data = await response.json();
       
       if (data.success) {
         setIsPlaying(true);
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           setIsTransitioning(false);
         }, 500);
       } else {
@@ -137,14 +240,18 @@ function SpotifyWidget() {
     
     setIsTransitioning(true);
     try {
-      const response = await fetch('/api/spotify/pause', { method: 'POST' });
+      const response = await fetch('/api/spotify/pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: activeUserId })
+      });
       const data = await response.json();
       
       if (data.success) {
         setIsPlaying(false);
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           setIsTransitioning(false);
         }, 500);
       } else {
@@ -163,13 +270,17 @@ function SpotifyWidget() {
     
     setIsTransitioning(true);
     try {
-      const response = await fetch('/api/spotify/next', { method: 'POST' });
+      const response = await fetch('/api/spotify/next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: activeUserId })
+      });
       const data = await response.json();
       
       if (data.success) {
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           setIsTransitioning(false);
         }, 1000);
       } else {
@@ -188,13 +299,17 @@ function SpotifyWidget() {
     
     setIsTransitioning(true);
     try {
-      const response = await fetch('/api/spotify/previous', { method: 'POST' });
+      const response = await fetch('/api/spotify/previous', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: activeUserId })
+      });
       const data = await response.json();
       
       if (data.success) {
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           setIsTransitioning(false);
         }, 1000);
       } else {
@@ -211,7 +326,8 @@ function SpotifyWidget() {
   // Récupérer les appareils disponibles
   const fetchDevices = useCallback(async () => {
     try {
-      const response = await fetch('/api/spotify/devices');
+      const url = activeUserId ? `/api/spotify/devices?userId=${activeUserId}` : '/api/spotify/devices';
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success && data.devices) {
@@ -224,7 +340,7 @@ function SpotifyWidget() {
     } catch (err) {
       console.error('Erreur lors de la récupération des appareils:', err);
     }
-  }, []);
+  }, [activeUserId]);
 
   // Transférer la lecture vers un appareil
   const handleTransferDevice = async (deviceId) => {
@@ -233,7 +349,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/transfer', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId, play: isPlaying })
+        body: JSON.stringify({ deviceId, play: isPlaying, userId: activeUserId })
       });
       const data = await response.json();
 
@@ -242,7 +358,7 @@ function SpotifyWidget() {
         setShowDevices(false);
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           await fetchDevices();
           setIsTransitioning(false);
         }, 500);
@@ -261,7 +377,8 @@ function SpotifyWidget() {
   const fetchPlaylists = useCallback(async () => {
     try {
       setLoadingPlaylists(true);
-      const response = await fetch('/api/spotify/playlists?type=user&limit=50');
+      const url = activeUserId ? `/api/spotify/playlists?limit=50&userId=${activeUserId}` : '/api/spotify/playlists?limit=50';
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success && data.playlists) {
@@ -273,13 +390,14 @@ function SpotifyWidget() {
     } finally {
       setLoadingPlaylists(false);
     }
-  }, []);
+  }, [activeUserId]);
 
   // Récupérer les morceaux d'une playlist
   const fetchPlaylistTracks = useCallback(async (playlistId) => {
     try {
       setLoadingPlaylists(true);
-      const response = await fetch(`/api/spotify/playlists/${playlistId}/tracks?limit=100`);
+      const url = activeUserId ? `/api/spotify/playlists/${playlistId}/tracks?limit=100&userId=${activeUserId}` : `/api/spotify/playlists/${playlistId}/tracks?limit=100`;
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success && data.tracks) {
@@ -291,7 +409,7 @@ function SpotifyWidget() {
     } finally {
       setLoadingPlaylists(false);
     }
-  }, []);
+  }, [activeUserId]);
 
   // Lancer une playlist
   const handlePlayPlaylist = async (playlistUri) => {
@@ -301,7 +419,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/play/playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlistUri, deviceId: activeDeviceId })
+        body: JSON.stringify({ playlistUri, deviceId: activeDeviceId, userId: activeUserId })
       });
       const data = await response.json();
 
@@ -310,10 +428,10 @@ function SpotifyWidget() {
         setSelectedPlaylist(null);
         // Attendre un peu plus longtemps pour que Spotify démarre la lecture
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           // Si toujours pas de track après 2 secondes, réessayer une fois
           setTimeout(async () => {
-            await fetchStatus();
+            await fetchStatus(activeUserId);
             setIsTransitioning(false);
           }, 2000);
         }, 1500);
@@ -338,7 +456,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/play/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackUri, deviceId: activeDeviceId })
+        body: JSON.stringify({ trackUri, deviceId: activeDeviceId, userId: activeUserId })
       });
       const data = await response.json();
 
@@ -347,10 +465,10 @@ function SpotifyWidget() {
         setSelectedPlaylist(null);
         // Attendre un peu plus longtemps pour que Spotify démarre la lecture
         setTimeout(async () => {
-          await fetchStatus();
+          await fetchStatus(activeUserId);
           // Si toujours pas de track après 2 secondes, réessayer une fois
           setTimeout(async () => {
-            await fetchStatus();
+            await fetchStatus(activeUserId);
             setIsTransitioning(false);
           }, 2000);
         }, 1500);
@@ -381,33 +499,62 @@ function SpotifyWidget() {
     fetchPlaylistTracks(playlist.id);
   };
 
-  // Fermer le menu des appareils en cliquant en dehors
+  // Fermer le menu des appareils et utilisateurs en cliquant en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showDevices && !event.target.closest('.spotify-widget-device-selector')) {
         setShowDevices(false);
       }
+      if (showUserSelector && !event.target.closest('.spotify-widget-user-selector')) {
+        setShowUserSelector(false);
+      }
+      if (showQRCode && !event.target.closest('.spotify-widget-qr-modal')) {
+        setShowQRCode(false);
+      }
     };
 
-    if (showDevices) {
+    if (showDevices || showUserSelector || showQRCode) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showDevices]);
+  }, [showDevices, showUserSelector, showQRCode]);
 
-  // Charger le statut au montage et périodiquement
+  // Écouter les messages de succès d'authentification pour fermer le QR
   useEffect(() => {
-    fetchStatus();
-    fetchDevices();
-    
-    // Rafraîchir toutes les 5 secondes
+    const messageHandler = (event) => {
+      if (event.data === 'spotify-auth-success') {
+        setShowQRCode(false);
+        fetchUsers();
+        fetchStatus();
+      }
+    };
+    window.addEventListener('message', messageHandler);
+    return () => window.removeEventListener('message', messageHandler);
+  }, [fetchUsers, fetchStatus]);
+
+  // Charger les utilisateurs au montage
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Charger le statut quand l'utilisateur actif change
+  useEffect(() => {
+    if (activeUserId !== null || users.length === 0) {
+      fetchStatus(activeUserId);
+      fetchDevices();
+    }
+  }, [activeUserId, fetchStatus, fetchDevices]);
+
+  // Rafraîchir périodiquement
+  useEffect(() => {
     const interval = setInterval(() => {
-      fetchStatus();
+      fetchUsers();
+      fetchStatus(activeUserId);
       fetchDevices();
     }, 5000);
     
     return () => clearInterval(interval);
-  }, [fetchStatus, fetchDevices]);
+  }, [fetchUsers, fetchStatus, fetchDevices, activeUserId]);
 
   if (loading) {
     return (
@@ -480,6 +627,99 @@ function SpotifyWidget() {
   return (
     <React.Fragment>
     <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
+      {/* Sélecteur d'utilisateur */}
+      {users.length > 0 && (
+        <div className="spotify-widget-user-selector">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowUserSelector(!showUserSelector);
+            }}
+            className="spotify-widget-user-button"
+            disabled={isTransitioning}
+          >
+            {activeUser?.images && activeUser.images.length > 0 ? (
+              <img src={activeUser.images[0].url} alt={activeUser.displayName} className="spotify-widget-user-avatar" />
+            ) : (
+              <div className="spotify-widget-user-avatar-placeholder">
+                {activeUser?.displayName?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
+            <span className="spotify-widget-user-name">{activeUser?.displayName || 'Utilisateur'}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 10l5 5 5-5z"/>
+            </svg>
+          </button>
+          {showUserSelector && (
+            <div className="spotify-widget-users-list">
+              {users.map(user => (
+                <div
+                  key={user.id}
+                  className={`spotify-widget-user-item ${user.isActive ? 'active' : ''}`}
+                >
+                  <button
+                    onClick={() => handleSwitchUser(user.id)}
+                    className="spotify-widget-user-item-button"
+                    disabled={user.isActive}
+                  >
+                    {user.images && user.images.length > 0 ? (
+                      <img src={user.images[0].url} alt={user.displayName} className="spotify-widget-user-item-avatar" />
+                    ) : (
+                      <div className="spotify-widget-user-item-avatar-placeholder">
+                        {user.displayName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    <span className="spotify-widget-user-item-name">{user.displayName}</span>
+                    {user.isActive && (
+                      <span className="spotify-widget-user-item-active">●</span>
+                    )}
+                  </button>
+                  {users.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveUser(user.id)}
+                      className="spotify-widget-user-item-remove"
+                      title="Déconnecter"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={handleAuth}
+                className="spotify-widget-user-item-add"
+              >
+                + Ajouter un compte (fenêtre)
+              </button>
+              <button
+                onClick={handleGenerateQR}
+                className="spotify-widget-user-item-add"
+                disabled={loadingQR}
+              >
+                {loadingQR ? 'Génération...' : '📱 Ajouter via QR code'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {users.length === 0 && isAuthenticated && (
+        <div className="spotify-widget-user-selector">
+          <button
+            onClick={handleAuth}
+            className="spotify-widget-user-button-add"
+          >
+            + Ajouter un compte (fenêtre)
+          </button>
+          <button
+            onClick={handleGenerateQR}
+            className="spotify-widget-user-button-add"
+            disabled={loadingQR}
+            style={{ marginTop: '8px' }}
+          >
+            {loadingQR ? 'Génération...' : '📱 Ajouter via QR code'}
+          </button>
+        </div>
+      )}
       <div className="spotify-widget-content">
         {track.albumArt && (
           <div className="spotify-widget-album-art">
@@ -681,6 +921,46 @@ function SpotifyWidget() {
               </div>
             </>
           )}
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Modale QR code - rendue via portail */}
+    {showQRCode && qrUrl && createPortal(
+      <div
+        className="spotify-widget-qr-modal"
+        onClick={() => setShowQRCode(false)}
+      >
+        <div className="spotify-widget-qr-content" onClick={(e) => e.stopPropagation()}>
+          <div className="spotify-widget-qr-header">
+            <h2>Ajouter un compte via QR code</h2>
+            <button
+              onClick={() => setShowQRCode(false)}
+              className="spotify-widget-qr-close"
+              aria-label="Fermer"
+            >
+              ×
+            </button>
+          </div>
+          <div className="spotify-widget-qr-body">
+            <p className="spotify-widget-qr-instructions">
+              Scannez ce QR code avec votre téléphone pour ajouter votre compte Spotify au dashboard.
+            </p>
+            <div className="spotify-widget-qr-code-container">
+              <QRCodeSVG
+                value={qrUrl}
+                size={256}
+                level="M"
+                includeMargin={true}
+                fgColor="#1db954"
+                bgColor="#121212"
+              />
+            </div>
+            <p className="spotify-widget-qr-hint">
+              Le QR code expire dans 5 minutes
+            </p>
+          </div>
         </div>
       </div>,
       document.body
