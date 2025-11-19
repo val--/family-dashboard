@@ -323,3 +323,24 @@ docker-compose down
 # Arrêter, supprimer et nettoyer les volumes
 docker-compose down -v
 ```
+
+## Idées / TODO
+
+- **Widget Musique Spotify** : Afficher la musique en cours de lecture
+  - Intégration avec l'API Spotify
+  - Affichage de la piste actuelle, de l'artiste et de la pochette d'album
+  - Contrôle de lecture (play/pause, suivant/précédent)
+  - Widget discret sur la page d'accueil
+
+- **Carte du réseau local** : Visualisation des appareils connectés
+  - Intégration avec la Freebox et/ou le routeur TP-Link
+  - Affichage des appareils connectés au réseau local
+  - Mise en évidence des appareils consommant le plus de bande passante (en couleur)
+  - Appareils moins actifs affichés en noir & blanc
+  - Vue d'ensemble de la consommation réseau de la maison
+
+- **Calendrier événements Nantes Métropole** : Ajout d'un calendrier public
+  - Intégration avec l'[API de l'agenda des événements de Nantes Métropole](https://www.data.gouv.fr/datasets/agenda-des-evenements-de-nantes-metropole/reuses_and_dataservices)
+  - Affichage des événements publics de la ville (expositions, conférences, spectacles, etc.)
+  - Filtrage par type d'événement
+  - Fusion avec le calendrier familial ou affichage séparé
