@@ -284,7 +284,6 @@ app.get('/api/spotify/auth', (req, res) => {
 app.get('/api/spotify/callback', async (req, res) => {
   const code = req.query.code;
   const error = req.query.error;
-  const qrToken = req.query.qr_token; // Token QR si présent
 
   if (error) {
     return res.send(`
@@ -361,50 +360,7 @@ app.get('/api/spotify/callback', async (req, res) => {
   }
 
   try {
-    // Si c'est une authentification QR, vérifier le token
-    if (qrToken && !spotifyService.isValidQRAuthToken(qrToken)) {
-      return res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Token expiré</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                background: #f5f5f5;
-              }
-              .container {
-                text-align: center;
-                padding: 20px;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Token expiré</h1>
-              <p>Le QR code a expiré. Veuillez en générer un nouveau.</p>
-            </div>
-          </body>
-        </html>
-      `);
-    }
-
     const result = await spotifyService.exchangeCodeForToken(code);
-    // exchangeCodeForToken gère maintenant automatiquement le stockage avec userId
-    
-    // Consommer le token QR si présent
-    if (qrToken) {
-      spotifyService.consumeQRAuthToken(qrToken);
-    }
     
     res.send(`
       <!DOCTYPE html>
@@ -437,7 +393,6 @@ app.get('/api/spotify/callback', async (req, res) => {
             <h1>✓ Authentification Spotify réussie !</h1>
             <p>Connecté en tant que : ${result.userInfo.displayName}</p>
             <p>Vous pouvez maintenant fermer cette fenêtre.</p>
-            <p>Le compte a été ajouté au dashboard.</p>
             <script>
               // Notifier la fenêtre parente si elle existe
               if (window.opener) {
@@ -490,156 +445,33 @@ app.get('/api/spotify/callback', async (req, res) => {
   }
 });
 
-// Route pour générer un token QR
-app.get('/api/spotify/qr-token', (req, res) => {
-  try {
-    const token = spotifyService.generateQRAuthToken();
-    // Récupérer l'IP du serveur ou utiliser une variable d'environnement
-    // Toujours utiliser HTTP pour le QR code
-    let serverUrl;
-    if (process.env.SERVER_URL) {
-      // Extraire le hostname/port de SERVER_URL (enlever https:// ou http://)
-      const url = process.env.SERVER_URL.replace(/^https?:\/\//, '');
-      serverUrl = `http://${url}`;
-    } else {
-      serverUrl = `http://${req.headers.host}`;
-    }
-    const qrUrl = `${serverUrl}/api/spotify/qr-auth/${token}`;
-    res.json({ token, qrUrl, success: true });
-  } catch (error) {
-    console.error('Error generating QR token:', error);
-    res.status(500).json({ error: error.message, success: false });
-  }
-});
-
-// Route pour l'authentification via QR code (redirige vers Spotify)
-app.get('/api/spotify/qr-auth/:token', (req, res) => {
-  try {
-    const { token } = req.params;
-    
-    if (!spotifyService.isValidQRAuthToken(token)) {
-      return res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Token expiré</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                background: #f5f5f5;
-              }
-              .container {
-                text-align: center;
-                padding: 20px;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Token expiré</h1>
-              <p>Le QR code a expiré. Veuillez en générer un nouveau.</p>
-            </div>
-          </body>
-        </html>
-      `);
-    }
-
-    const authUrl = spotifyService.getQRAuthorizationUrl(token);
-    res.redirect(authUrl);
-  } catch (error) {
-    console.error('Error in QR auth:', error);
-    res.status(500).send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Erreur</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              height: 100vh;
-              margin: 0;
-              background: #f5f5f5;
-            }
-            .container {
-              text-align: center;
-              padding: 20px;
-              background: white;
-              border-radius: 8px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>Erreur</h1>
-            <p>${error.message}</p>
-          </div>
-        </body>
-      </html>
-    `);
-  }
-});
-
-// Routes pour gérer les utilisateurs
-app.get('/api/spotify/users', (req, res) => {
-  try {
-    const users = spotifyService.getUsers();
-    const activeUser = spotifyService.getActiveUser();
-    res.json({ users, activeUser, success: true });
-  } catch (error) {
-    console.error('Error getting Spotify users:', error);
-    res.status(500).json({ error: error.message, success: false });
-  }
-});
-
-app.put('/api/spotify/users/active', (req, res) => {
-  try {
-    const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required', success: false });
-    }
-    const result = spotifyService.setActiveUser(userId);
-    res.json({ ...result, success: true });
-  } catch (error) {
-    console.error('Error setting active user:', error);
-    res.status(500).json({ error: error.message, success: false });
-  }
-});
-
-app.delete('/api/spotify/users/:userId', (req, res) => {
-  try {
-    const { userId } = req.params;
-    const result = spotifyService.removeUser(userId);
-    res.json({ ...result, success: true });
-  } catch (error) {
-    console.error('Error removing user:', error);
-    res.status(500).json({ error: error.message, success: false });
-  }
-});
-
 app.get('/api/spotify/status', async (req, res) => {
   try {
-    const userId = req.query.userId || null;
-    if (!spotifyService.isAuthenticated(userId)) {
+    if (!spotifyService.isAuthenticated()) {
       return res.json({ authenticated: false, success: true });
     }
 
-    const playback = await spotifyService.getCurrentlyPlaying(userId);
-    const activeUser = spotifyService.getActiveUser();
-    res.json({ ...playback, authenticated: true, activeUser, success: true });
+    const playback = await spotifyService.getCurrentlyPlaying();
+    const currentUser = spotifyService.getCurrentUser();
+    
+    // Si aucun morceau n'est en cours, récupérer le dernier morceau joué
+    let lastPlayedTrack = null;
+    if (!playback.track) {
+      try {
+        lastPlayedTrack = await spotifyService.getRecentlyPlayed(1);
+      } catch (error) {
+        // Si l'erreur n'est pas critique, continuer sans le dernier morceau
+        console.error('Error fetching recently played:', error);
+      }
+    }
+    
+    res.json({ 
+      ...playback, 
+      lastPlayedTrack,
+      authenticated: true, 
+      currentUser, 
+      success: true 
+    });
   } catch (error) {
     console.error('Error fetching Spotify status:', error);
     // Améliorer les messages d'erreur pour les erreurs réseau
@@ -653,8 +485,7 @@ app.get('/api/spotify/status', async (req, res) => {
 
 app.post('/api/spotify/play', async (req, res) => {
   try {
-    const userId = req.body.userId || null;
-    const result = await spotifyService.resumePlayback(userId);
+    const result = await spotifyService.resumePlayback();
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error resuming Spotify playback:', error);
@@ -664,8 +495,7 @@ app.post('/api/spotify/play', async (req, res) => {
 
 app.post('/api/spotify/pause', async (req, res) => {
   try {
-    const userId = req.body.userId || null;
-    const result = await spotifyService.pausePlayback(userId);
+    const result = await spotifyService.pausePlayback();
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error pausing Spotify playback:', error);
@@ -675,8 +505,7 @@ app.post('/api/spotify/pause', async (req, res) => {
 
 app.post('/api/spotify/next', async (req, res) => {
   try {
-    const userId = req.body.userId || null;
-    const result = await spotifyService.skipToNext(userId);
+    const result = await spotifyService.skipToNext();
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error skipping to next track:', error);
@@ -686,8 +515,7 @@ app.post('/api/spotify/next', async (req, res) => {
 
 app.post('/api/spotify/previous', async (req, res) => {
   try {
-    const userId = req.body.userId || null;
-    const result = await spotifyService.skipToPrevious(userId);
+    const result = await spotifyService.skipToPrevious();
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error skipping to previous track:', error);
@@ -697,12 +525,11 @@ app.post('/api/spotify/previous', async (req, res) => {
 
 app.get('/api/spotify/devices', async (req, res) => {
   try {
-    const userId = req.query.userId || null;
-    if (!spotifyService.isAuthenticated(userId)) {
+    if (!spotifyService.isAuthenticated()) {
       return res.status(401).json({ error: 'Not authenticated', success: false });
     }
 
-    const result = await spotifyService.getDevices(userId);
+    const result = await spotifyService.getDevices();
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error fetching Spotify devices:', error);
@@ -717,8 +544,7 @@ app.get('/api/spotify/devices', async (req, res) => {
 
 app.put('/api/spotify/transfer', async (req, res) => {
   try {
-    const userId = req.body.userId || null;
-    if (!spotifyService.isAuthenticated(userId)) {
+    if (!spotifyService.isAuthenticated()) {
       return res.status(401).json({ error: 'Not authenticated', success: false });
     }
 
@@ -728,7 +554,7 @@ app.put('/api/spotify/transfer', async (req, res) => {
       return res.status(400).json({ error: 'Device ID is required', success: false });
     }
 
-    const result = await spotifyService.transferPlayback(deviceId, play || false, userId);
+    const result = await spotifyService.transferPlayback(deviceId, play || false);
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error transferring Spotify playback:', error);
@@ -744,8 +570,7 @@ app.put('/api/spotify/transfer', async (req, res) => {
 // Routes playlists (seulement les playlists utilisateur)
 app.get('/api/spotify/playlists', async (req, res) => {
   try {
-    const userId = req.query.userId || null;
-    if (!spotifyService.isAuthenticated(userId)) {
+    if (!spotifyService.isAuthenticated()) {
       return res.status(401).json({ error: 'Not authenticated', success: false });
     }
 
@@ -753,7 +578,7 @@ app.get('/api/spotify/playlists', async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
 
-    const result = await spotifyService.getUserPlaylists(limit, offset, userId);
+    const result = await spotifyService.getUserPlaylists(limit, offset);
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error fetching playlists:', error);
@@ -763,8 +588,7 @@ app.get('/api/spotify/playlists', async (req, res) => {
 
 app.get('/api/spotify/playlists/:playlistId/tracks', async (req, res) => {
   try {
-    const userId = req.query.userId || null;
-    if (!spotifyService.isAuthenticated(userId)) {
+    if (!spotifyService.isAuthenticated()) {
       return res.status(401).json({ error: 'Not authenticated', success: false });
     }
 
@@ -772,7 +596,7 @@ app.get('/api/spotify/playlists/:playlistId/tracks', async (req, res) => {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
 
-    const result = await spotifyService.getPlaylistTracks(playlistId, limit, offset, userId);
+    const result = await spotifyService.getPlaylistTracks(playlistId, limit, offset);
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error fetching playlist tracks:', error);
@@ -782,14 +606,13 @@ app.get('/api/spotify/playlists/:playlistId/tracks', async (req, res) => {
 
 app.post('/api/spotify/play/playlist', async (req, res) => {
   try {
-    const { playlistUri, deviceId, userId } = req.body;
+    const { playlistUri, deviceId } = req.body;
 
     if (!playlistUri) {
       return res.status(400).json({ error: 'Playlist URI is required', success: false });
     }
 
-    const targetUserId = userId || null;
-    const result = await spotifyService.playPlaylist(playlistUri, deviceId, targetUserId);
+    const result = await spotifyService.playPlaylist(playlistUri, deviceId);
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error playing playlist:', error);
@@ -799,18 +622,38 @@ app.post('/api/spotify/play/playlist', async (req, res) => {
 
 app.post('/api/spotify/play/track', async (req, res) => {
   try {
-    const { trackUri, deviceId, userId } = req.body;
+    const { trackUri, deviceId } = req.body;
 
     if (!trackUri) {
       return res.status(400).json({ error: 'Track URI is required', success: false });
     }
 
-    const targetUserId = userId || null;
-    const result = await spotifyService.playTrack(trackUri, deviceId, targetUserId);
+    const result = await spotifyService.playTrack(trackUri, deviceId);
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error playing track:', error);
     res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/volume', async (req, res) => {
+  try {
+    const { volumePercent, deviceId } = req.body;
+
+    if (volumePercent === undefined || volumePercent === null) {
+      return res.status(400).json({ error: 'Volume percent is required', success: false });
+    }
+
+    const volume = Math.max(0, Math.min(100, parseInt(volumePercent)));
+    const result = await spotifyService.setVolume(volume, deviceId);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error setting volume:', error);
+    if (error.message.includes('Network error')) {
+      res.status(503).json({ error: error.message, success: false });
+    } else {
+      res.status(500).json({ error: error.message, success: false });
+    }
   }
 });
 

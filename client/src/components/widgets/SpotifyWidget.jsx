@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { QRCodeSVG } from 'qrcode.react';
 
 /**
  * Widget Spotify pour afficher le morceau actuellement joué
@@ -10,6 +9,7 @@ function SpotifyWidget() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [track, setTrack] = useState(null);
+  const [lastPlayedTrack, setLastPlayedTrack] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -17,43 +17,21 @@ function SpotifyWidget() {
   const [devices, setDevices] = useState([]);
   const [showDevices, setShowDevices] = useState(false);
   const [activeDeviceId, setActiveDeviceId] = useState(null);
+  const [volume, setVolume] = useState(50);
   const [showPlaylists, setShowPlaylists] = useState(false);
   const [playlists, setPlaylists] = useState([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState(null);
   const [playlistTracks, setPlaylistTracks] = useState([]);
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [activeUser, setActiveUser] = useState(null);
-  const [activeUserId, setActiveUserId] = useState(null);
-  const [showUserSelector, setShowUserSelector] = useState(false);
-  const [showQRCode, setShowQRCode] = useState(false);
-  const [qrUrl, setQrUrl] = useState(null);
-  const [loadingQR, setLoadingQR] = useState(false);
-
-  // Récupérer la liste des utilisateurs
-  const fetchUsers = useCallback(async () => {
-    try {
-      const response = await fetch('/api/spotify/users');
-      const data = await response.json();
-
-      if (data.success) {
-        setUsers(data.users || []);
-        setActiveUser(data.activeUser);
-        if (data.activeUser) {
-          setActiveUserId(data.activeUser.id);
-        }
-      }
-    } catch (err) {
-      console.error('Erreur lors de la récupération des utilisateurs:', err);
-    }
-  }, []);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [playlistSortBy, setPlaylistSortBy] = useState('default'); // 'default' (ordre d'ajout), 'name'
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   // Vérifier l'authentification et récupérer le statut
-  const fetchStatus = useCallback(async (userId = null) => {
+  const fetchStatus = useCallback(async () => {
     try {
       setError(null);
-      const url = userId ? `/api/spotify/status?userId=${userId}` : '/api/spotify/status';
-      const response = await fetch(url);
+      const response = await fetch('/api/spotify/status');
       const data = await response.json();
 
       if (!data.success) {
@@ -69,10 +47,13 @@ function SpotifyWidget() {
         if (data.track) {
           setIsStartingPlayback(false);
         }
-        // Mettre à jour l'utilisateur actif si fourni
-        if (data.activeUser) {
-          setActiveUser(data.activeUser);
-          setActiveUserId(data.activeUser.id);
+        // Mettre à jour le dernier morceau joué si fourni
+        if (data.lastPlayedTrack) {
+          setLastPlayedTrack(data.lastPlayedTrack);
+        }
+        // Mettre à jour l'utilisateur connecté si fourni
+        if (data.currentUser) {
+          setCurrentUser(data.currentUser);
         }
       }
     } catch (err) {
@@ -98,7 +79,6 @@ function SpotifyWidget() {
         // Écouter les messages de la fenêtre popup
         const messageHandler = (event) => {
           if (event.data === 'spotify-auth-success') {
-            fetchUsers();
             fetchStatus();
             window.removeEventListener('message', messageHandler);
           }
@@ -110,14 +90,12 @@ function SpotifyWidget() {
           if (authWindow.closed) {
             clearInterval(checkInterval);
             window.removeEventListener('message', messageHandler);
-            // Vérifier une dernière fois le statut et les utilisateurs
-            await fetchUsers();
+            // Vérifier une dernière fois le statut
             await fetchStatus();
             return;
           }
           
-          // Vérifier le statut d'authentification et les utilisateurs
-          await fetchUsers();
+          // Vérifier le statut d'authentification
           await fetchStatus();
           if (isAuthenticated) {
             clearInterval(checkInterval);
@@ -140,69 +118,6 @@ function SpotifyWidget() {
     }
   };
 
-  // Changer d'utilisateur actif
-  const handleSwitchUser = async (userId) => {
-    try {
-      const response = await fetch('/api/spotify/users/active', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setActiveUserId(userId);
-        await fetchUsers();
-        await fetchStatus(userId);
-        setShowUserSelector(false);
-      }
-    } catch (err) {
-      console.error('Erreur lors du changement d\'utilisateur:', err);
-      setError(err.message);
-    }
-  };
-
-  // Supprimer un utilisateur
-  const handleRemoveUser = async (userId) => {
-    try {
-      const response = await fetch(`/api/spotify/users/${userId}`, {
-        method: 'DELETE'
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        await fetchUsers();
-        // Si l'utilisateur supprimé était actif, recharger le statut
-        if (activeUserId === userId) {
-          await fetchStatus();
-        }
-      }
-    } catch (err) {
-      console.error('Erreur lors de la suppression de l\'utilisateur:', err);
-      setError(err.message);
-    }
-  };
-
-  // Générer un QR code pour ajouter un utilisateur
-  const handleGenerateQR = async () => {
-    try {
-      setLoadingQR(true);
-      const response = await fetch('/api/spotify/qr-token');
-      const data = await response.json();
-
-      if (data.success && data.qrUrl) {
-        setQrUrl(data.qrUrl);
-        setShowQRCode(true);
-      } else {
-        setError(data.error || 'Failed to generate QR code');
-      }
-    } catch (err) {
-      console.error('Erreur lors de la génération du QR code:', err);
-      setError(err.message);
-    } finally {
-      setLoadingQR(false);
-    }
-  };
 
   // Contrôles de lecture
   const handlePlay = async () => {
@@ -210,28 +125,56 @@ function SpotifyWidget() {
     
     setIsTransitioning(true);
     try {
-      const response = await fetch('/api/spotify/play', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: activeUserId })
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setIsPlaying(true);
-        // Rafraîchir le statut après un court délai
-        setTimeout(async () => {
-          await fetchStatus(activeUserId);
+      // Si aucun morceau n'est en cours mais qu'on a un dernier morceau joué, le relancer
+      if (!track && lastPlayedTrack) {
+        const response = await fetch('/api/spotify/play/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trackUri: lastPlayedTrack.uri, deviceId: activeDeviceId })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          setIsStartingPlayback(true);
+          // Attendre un peu avant de rafraîchir le statut
+          setTimeout(async () => {
+            await fetchStatus();
+            setTimeout(async () => {
+              await fetchStatus();
+              setIsTransitioning(false);
+            }, 2000);
+          }, 1500);
+        } else {
+          setError(data.error || 'Failed to play track');
           setIsTransitioning(false);
-        }, 500);
+          setIsStartingPlayback(false);
+        }
       } else {
-        setError(data.error || 'Failed to resume playback');
-        setIsTransitioning(false);
+        // Reprendre la lecture normale
+        const response = await fetch('/api/spotify/play', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          setIsPlaying(true);
+          // Rafraîchir le statut après un court délai
+          setTimeout(async () => {
+            await fetchStatus();
+            setIsTransitioning(false);
+          }, 500);
+        } else {
+          setError(data.error || 'Failed to resume playback');
+          setIsTransitioning(false);
+        }
       }
     } catch (err) {
       console.error('Erreur lors de la reprise:', err);
       setError(err.message);
       setIsTransitioning(false);
+      setIsStartingPlayback(false);
     }
   };
 
@@ -243,7 +186,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/pause', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: activeUserId })
+        body: JSON.stringify({})
       });
       const data = await response.json();
       
@@ -251,7 +194,7 @@ function SpotifyWidget() {
         setIsPlaying(false);
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus(activeUserId);
+          await fetchStatus();
           setIsTransitioning(false);
         }, 500);
       } else {
@@ -273,14 +216,14 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: activeUserId })
+        body: JSON.stringify({})
       });
       const data = await response.json();
       
       if (data.success) {
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus(activeUserId);
+          await fetchStatus();
           setIsTransitioning(false);
         }, 1000);
       } else {
@@ -302,14 +245,14 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/previous', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: activeUserId })
+        body: JSON.stringify({})
       });
       const data = await response.json();
       
       if (data.success) {
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus(activeUserId);
+          await fetchStatus();
           setIsTransitioning(false);
         }, 1000);
       } else {
@@ -326,7 +269,7 @@ function SpotifyWidget() {
   // Récupérer les appareils disponibles
   const fetchDevices = useCallback(async () => {
     try {
-      const url = activeUserId ? `/api/spotify/devices?userId=${activeUserId}` : '/api/spotify/devices';
+      const url = '/api/spotify/devices';
       const response = await fetch(url);
       const data = await response.json();
 
@@ -335,12 +278,15 @@ function SpotifyWidget() {
         const activeDevice = data.devices.find(d => d.isActive);
         if (activeDevice) {
           setActiveDeviceId(activeDevice.id);
+          if (activeDevice.volume !== undefined && activeDevice.volume !== null) {
+            setVolume(activeDevice.volume);
+          }
         }
       }
     } catch (err) {
       console.error('Erreur lors de la récupération des appareils:', err);
     }
-  }, [activeUserId]);
+  }, []);
 
   // Transférer la lecture vers un appareil
   const handleTransferDevice = async (deviceId) => {
@@ -349,7 +295,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/transfer', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId, play: isPlaying, userId: activeUserId })
+        body: JSON.stringify({ deviceId, play: isPlaying })
       });
       const data = await response.json();
 
@@ -358,7 +304,7 @@ function SpotifyWidget() {
         setShowDevices(false);
         // Rafraîchir le statut après un court délai
         setTimeout(async () => {
-          await fetchStatus(activeUserId);
+          await fetchStatus();
           await fetchDevices();
           setIsTransitioning(false);
         }, 500);
@@ -373,30 +319,49 @@ function SpotifyWidget() {
     }
   };
 
-  // Récupérer les playlists de l'utilisateur
+  // Récupérer les playlists de l'utilisateur (avec pagination pour récupérer toutes les playlists)
   const fetchPlaylists = useCallback(async () => {
     try {
       setLoadingPlaylists(true);
-      const url = activeUserId ? `/api/spotify/playlists?limit=50&userId=${activeUserId}` : '/api/spotify/playlists?limit=50';
-      const response = await fetch(url);
-      const data = await response.json();
+      let allPlaylists = [];
+      let offset = 0;
+      const limit = 50; // Limite maximale par requête
+      let hasMore = true;
 
-      if (data.success && data.playlists) {
-        setPlaylists(data.playlists);
+      // Récupérer toutes les playlists par pagination
+      while (hasMore) {
+        const url = `/api/spotify/playlists?limit=${limit}&offset=${offset}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success && data.playlists) {
+          allPlaylists = [...allPlaylists, ...data.playlists];
+          
+          // Vérifier s'il y a plus de playlists à récupérer
+          if (data.playlists.length < limit || allPlaylists.length >= data.total) {
+            hasMore = false;
+          } else {
+            offset += limit;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+
+      setPlaylists(allPlaylists);
     } catch (err) {
       console.error('Erreur lors de la récupération des playlists:', err);
       setError(err.message);
     } finally {
       setLoadingPlaylists(false);
     }
-  }, [activeUserId]);
+  }, []);
 
   // Récupérer les morceaux d'une playlist
   const fetchPlaylistTracks = useCallback(async (playlistId) => {
     try {
       setLoadingPlaylists(true);
-      const url = activeUserId ? `/api/spotify/playlists/${playlistId}/tracks?limit=100&userId=${activeUserId}` : `/api/spotify/playlists/${playlistId}/tracks?limit=100`;
+      const url = `/api/spotify/playlists/${playlistId}/tracks?limit=100`;
       const response = await fetch(url);
       const data = await response.json();
 
@@ -409,7 +374,7 @@ function SpotifyWidget() {
     } finally {
       setLoadingPlaylists(false);
     }
-  }, [activeUserId]);
+  }, []);
 
   // Lancer une playlist
   const handlePlayPlaylist = async (playlistUri) => {
@@ -419,7 +384,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/play/playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlistUri, deviceId: activeDeviceId, userId: activeUserId })
+        body: JSON.stringify({ playlistUri, deviceId: activeDeviceId })
       });
       const data = await response.json();
 
@@ -428,10 +393,10 @@ function SpotifyWidget() {
         setSelectedPlaylist(null);
         // Attendre un peu plus longtemps pour que Spotify démarre la lecture
         setTimeout(async () => {
-          await fetchStatus(activeUserId);
+          await fetchStatus();
           // Si toujours pas de track après 2 secondes, réessayer une fois
           setTimeout(async () => {
-            await fetchStatus(activeUserId);
+            await fetchStatus();
             setIsTransitioning(false);
           }, 2000);
         }, 1500);
@@ -456,7 +421,7 @@ function SpotifyWidget() {
       const response = await fetch('/api/spotify/play/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackUri, deviceId: activeDeviceId, userId: activeUserId })
+        body: JSON.stringify({ trackUri, deviceId: activeDeviceId })
       });
       const data = await response.json();
 
@@ -465,10 +430,10 @@ function SpotifyWidget() {
         setSelectedPlaylist(null);
         // Attendre un peu plus longtemps pour que Spotify démarre la lecture
         setTimeout(async () => {
-          await fetchStatus(activeUserId);
+          await fetchStatus();
           // Si toujours pas de track après 2 secondes, réessayer une fois
           setTimeout(async () => {
-            await fetchStatus(activeUserId);
+            await fetchStatus();
             setIsTransitioning(false);
           }, 2000);
         }, 1500);
@@ -499,62 +464,84 @@ function SpotifyWidget() {
     fetchPlaylistTracks(playlist.id);
   };
 
-  // Fermer le menu des appareils et utilisateurs en cliquant en dehors
+  // Trier les playlists selon le critère sélectionné
+  const sortedPlaylists = React.useMemo(() => {
+    if (!playlists || playlists.length === 0) return [];
+    
+    const sorted = [...playlists];
+    switch (playlistSortBy) {
+      case 'name':
+        sorted.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+        break;
+      case 'default':
+      default:
+        // Garder l'ordre d'ajout (ordre original de l'API)
+        break;
+    }
+    return sorted;
+  }, [playlists, playlistSortBy]);
+
+  // Gérer le changement de tri
+  const handleSortChange = (sortBy) => {
+    setPlaylistSortBy(sortBy);
+    setShowSortMenu(false);
+  };
+
+  // Gérer le changement de volume
+  const handleVolumeChange = async (newVolume) => {
+    setVolume(newVolume);
+    
+    if (!activeDeviceId) return;
+    
+    try {
+      const response = await fetch('/api/spotify/volume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ volumePercent: newVolume, deviceId: activeDeviceId })
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to set volume');
+      }
+    } catch (err) {
+      console.error('Erreur lors du changement de volume:', err);
+      // Ne pas afficher d'erreur à l'utilisateur pour le volume
+    }
+  };
+
+  // Fermer le menu des appareils et le menu de tri en cliquant en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showDevices && !event.target.closest('.spotify-widget-device-selector')) {
         setShowDevices(false);
       }
-      if (showUserSelector && !event.target.closest('.spotify-widget-user-selector')) {
-        setShowUserSelector(false);
-      }
-      if (showQRCode && !event.target.closest('.spotify-widget-qr-modal')) {
-        setShowQRCode(false);
+      if (showSortMenu && !event.target.closest('.spotify-widget-playlists-sort')) {
+        setShowSortMenu(false);
       }
     };
 
-    if (showDevices || showUserSelector || showQRCode) {
+    if (showDevices || showSortMenu) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showDevices, showUserSelector, showQRCode]);
+  }, [showDevices, showSortMenu]);
 
-  // Écouter les messages de succès d'authentification pour fermer le QR
+  // Charger le statut au montage
   useEffect(() => {
-    const messageHandler = (event) => {
-      if (event.data === 'spotify-auth-success') {
-        setShowQRCode(false);
-        fetchUsers();
-        fetchStatus();
-      }
-    };
-    window.addEventListener('message', messageHandler);
-    return () => window.removeEventListener('message', messageHandler);
-  }, [fetchUsers, fetchStatus]);
-
-  // Charger les utilisateurs au montage
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  // Charger le statut quand l'utilisateur actif change
-  useEffect(() => {
-    if (activeUserId !== null || users.length === 0) {
-      fetchStatus(activeUserId);
-      fetchDevices();
-    }
-  }, [activeUserId, fetchStatus, fetchDevices]);
+    fetchStatus();
+    fetchDevices();
+  }, [fetchStatus, fetchDevices]);
 
   // Rafraîchir périodiquement
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchUsers();
-      fetchStatus(activeUserId);
+      fetchStatus();
       fetchDevices();
     }, 5000);
     
     return () => clearInterval(interval);
-  }, [fetchUsers, fetchStatus, fetchDevices, activeUserId]);
+  }, [fetchStatus, fetchDevices]);
 
   if (loading) {
     return (
@@ -611,16 +598,178 @@ function SpotifyWidget() {
       );
     }
 
-    return (
-      <div className="spotify-widget">
-        <div className="spotify-widget-content">
-          <div className="spotify-widget-no-track">
-            <div className="spotify-widget-icon">🎵</div>
-            <p>Aucun morceau en cours de lecture</p>
-            <p className="spotify-widget-hint">Lancez un morceau sur Spotify</p>
+    // Afficher le dernier morceau joué s'il existe
+    const displayTrack = lastPlayedTrack;
+    
+    if (!displayTrack) {
+      return (
+        <div className="spotify-widget">
+          <div className="spotify-widget-content">
+            <div className="spotify-widget-no-track">
+              <div className="spotify-widget-icon">🎵</div>
+              <p>Aucun morceau en cours de lecture</p>
+              <p className="spotify-widget-hint">Lancez un morceau sur Spotify</p>
+            </div>
           </div>
         </div>
-      </div>
+      );
+    }
+
+    // Afficher le dernier morceau joué avec les contrôles
+    return (
+      <React.Fragment>
+        <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
+          {currentUser && (
+            <div className="spotify-widget-user-selector">
+              <div className="spotify-widget-user-button" style={{ cursor: 'default' }}>
+                {currentUser.images && currentUser.images.length > 0 ? (
+                  <img src={currentUser.images[0].url} alt={currentUser.displayName} className="spotify-widget-user-avatar" />
+                ) : (
+                  <div className="spotify-widget-user-avatar-placeholder">
+                    {currentUser.displayName?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <span className="spotify-widget-user-name">{currentUser.displayName || 'Utilisateur'}</span>
+              </div>
+            </div>
+          )}
+          <div className="spotify-widget-content">
+            {displayTrack.albumArt && (
+              <div className="spotify-widget-album-art">
+                <img src={displayTrack.albumArt} alt={displayTrack.album} />
+              </div>
+            )}
+            
+            <div className="spotify-widget-info">
+              <div className="spotify-widget-track-name">{displayTrack.name}</div>
+              <div className="spotify-widget-artist">{displayTrack.artists}</div>
+              <div className="spotify-widget-album">{displayTrack.album}</div>
+            </div>
+
+            {devices.length > 0 && (
+              <div className="spotify-widget-device-selector">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDevices(!showDevices);
+                  }}
+                  className="spotify-widget-device-button"
+                  disabled={isTransitioning}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                  {devices.find(d => d.id === activeDeviceId)?.name || 'Sélectionner un appareil'}
+                </button>
+                {showDevices && (
+                  <div className="spotify-widget-devices-list">
+                    {devices.map(device => (
+                      <button
+                        key={device.id}
+                        onClick={() => handleTransferDevice(device.id)}
+                        className={`spotify-widget-device-item ${device.id === activeDeviceId ? 'active' : ''}`}
+                        disabled={isTransitioning || device.id === activeDeviceId}
+                      >
+                        <span className="spotify-widget-device-name">{device.name}</span>
+                        <span className="spotify-widget-device-type">{device.type}</span>
+                        {device.id === activeDeviceId && (
+                          <span className="spotify-widget-device-active">●</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="spotify-widget-controls">
+              <button
+                onClick={handlePrevious}
+                disabled={isTransitioning || !activeDeviceId}
+                className="spotify-widget-control-button spotify-widget-previous"
+                aria-label="Morceau précédent"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                </svg>
+              </button>
+              <button
+                onClick={handlePlay}
+                disabled={isTransitioning || !activeDeviceId}
+                className="spotify-widget-control-button spotify-widget-play-pause"
+                aria-label="Lecture"
+              >
+                {isTransitioning ? (
+                  <div className="spotify-widget-button-spinner"></div>
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={isTransitioning || !activeDeviceId}
+                className="spotify-widget-control-button spotify-widget-next"
+                aria-label="Morceau suivant"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+      {/* Bouton pour ouvrir les playlists */}
+      <button
+        onClick={handleOpenPlaylists}
+        className="spotify-widget-playlists-button"
+        disabled={isTransitioning}
+        aria-label="Ouvrir les playlists"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm3-10h13v2H7zm0 5h13v2H7zm0 5h13v2H7z"/>
+        </svg>
+      </button>
+
+      {/* Slider de volume */}
+      {activeDeviceId && (
+        <div className="spotify-widget-volume-slider">
+          <div className="spotify-widget-volume-icon">
+            {volume === 0 ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+              </svg>
+            ) : volume < 50 ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+            )}
+          </div>
+          <div className="spotify-widget-volume-track">
+            <div 
+              className="spotify-widget-volume-fill" 
+              style={{ height: `${volume}%` }}
+            ></div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
+              className="spotify-widget-volume-input"
+              aria-label="Volume"
+              disabled={!activeDeviceId}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+    </React.Fragment>
     );
   }
 
@@ -628,96 +777,18 @@ function SpotifyWidget() {
     <React.Fragment>
     <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
       {/* Sélecteur d'utilisateur */}
-      {users.length > 0 && (
+      {currentUser && (
         <div className="spotify-widget-user-selector">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowUserSelector(!showUserSelector);
-            }}
-            className="spotify-widget-user-button"
-            disabled={isTransitioning}
-          >
-            {activeUser?.images && activeUser.images.length > 0 ? (
-              <img src={activeUser.images[0].url} alt={activeUser.displayName} className="spotify-widget-user-avatar" />
+          <div className="spotify-widget-user-button" style={{ cursor: 'default' }}>
+            {currentUser.images && currentUser.images.length > 0 ? (
+              <img src={currentUser.images[0].url} alt={currentUser.displayName} className="spotify-widget-user-avatar" />
             ) : (
               <div className="spotify-widget-user-avatar-placeholder">
-                {activeUser?.displayName?.charAt(0)?.toUpperCase() || '?'}
+                {currentUser.displayName?.charAt(0)?.toUpperCase() || '?'}
               </div>
             )}
-            <span className="spotify-widget-user-name">{activeUser?.displayName || 'Utilisateur'}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7 10l5 5 5-5z"/>
-            </svg>
-          </button>
-          {showUserSelector && (
-            <div className="spotify-widget-users-list">
-              {users.map(user => (
-                <div
-                  key={user.id}
-                  className={`spotify-widget-user-item ${user.isActive ? 'active' : ''}`}
-                >
-                  <button
-                    onClick={() => handleSwitchUser(user.id)}
-                    className="spotify-widget-user-item-button"
-                    disabled={user.isActive}
-                  >
-                    {user.images && user.images.length > 0 ? (
-                      <img src={user.images[0].url} alt={user.displayName} className="spotify-widget-user-item-avatar" />
-                    ) : (
-                      <div className="spotify-widget-user-item-avatar-placeholder">
-                        {user.displayName?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                    <span className="spotify-widget-user-item-name">{user.displayName}</span>
-                    {user.isActive && (
-                      <span className="spotify-widget-user-item-active">●</span>
-                    )}
-                  </button>
-                  {users.length > 1 && (
-                    <button
-                      onClick={() => handleRemoveUser(user.id)}
-                      className="spotify-widget-user-item-remove"
-                      title="Déconnecter"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={handleAuth}
-                className="spotify-widget-user-item-add"
-              >
-                + Ajouter un compte (fenêtre)
-              </button>
-              <button
-                onClick={handleGenerateQR}
-                className="spotify-widget-user-item-add"
-                disabled={loadingQR}
-              >
-                {loadingQR ? 'Génération...' : '📱 Ajouter via QR code'}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      {users.length === 0 && isAuthenticated && (
-        <div className="spotify-widget-user-selector">
-          <button
-            onClick={handleAuth}
-            className="spotify-widget-user-button-add"
-          >
-            + Ajouter un compte (fenêtre)
-          </button>
-          <button
-            onClick={handleGenerateQR}
-            className="spotify-widget-user-button-add"
-            disabled={loadingQR}
-            style={{ marginTop: '8px' }}
-          >
-            {loadingQR ? 'Génération...' : '📱 Ajouter via QR code'}
-          </button>
+            <span className="spotify-widget-user-name">{currentUser.displayName || 'Utilisateur'}</span>
+          </div>
         </div>
       )}
       <div className="spotify-widget-content">
@@ -772,7 +843,7 @@ function SpotifyWidget() {
         <div className="spotify-widget-controls">
           <button
             onClick={handlePrevious}
-            disabled={isTransitioning}
+            disabled={isTransitioning || !activeDeviceId}
             className="spotify-widget-control-button spotify-widget-previous"
             aria-label="Morceau précédent"
           >
@@ -782,7 +853,7 @@ function SpotifyWidget() {
           </button>
           <button
             onClick={isPlaying ? handlePause : handlePlay}
-            disabled={isTransitioning}
+            disabled={isTransitioning || !activeDeviceId}
             className="spotify-widget-control-button spotify-widget-play-pause"
             aria-label={isPlaying ? 'Pause' : 'Lecture'}
           >
@@ -800,7 +871,7 @@ function SpotifyWidget() {
           </button>
           <button
             onClick={handleNext}
-            disabled={isTransitioning}
+            disabled={isTransitioning || !activeDeviceId}
             className="spotify-widget-control-button spotify-widget-next"
             aria-label="Morceau suivant"
           >
@@ -822,6 +893,43 @@ function SpotifyWidget() {
           <path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm3-10h13v2H7zm0 5h13v2H7zm0 5h13v2H7z"/>
         </svg>
       </button>
+
+      {/* Slider de volume */}
+      {activeDeviceId && (
+        <div className="spotify-widget-volume-slider">
+          <div className="spotify-widget-volume-icon">
+            {volume === 0 ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+              </svg>
+            ) : volume < 50 ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+            )}
+          </div>
+          <div className="spotify-widget-volume-track">
+            <div 
+              className="spotify-widget-volume-fill" 
+              style={{ height: `${volume}%` }}
+            ></div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={volume}
+              onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
+              className="spotify-widget-volume-input"
+              aria-label="Volume"
+              disabled={!activeDeviceId}
+            />
+          </div>
+        </div>
+      )}
     </div>
 
     {/* Modale des playlists - rendue via portail */}
@@ -833,23 +941,57 @@ function SpotifyWidget() {
         <div className="spotify-widget-playlists-content" onClick={(e) => e.stopPropagation()}>
           <div className="spotify-widget-playlists-header">
             <h2>Mes playlists</h2>
-            <button
-              onClick={() => setShowPlaylists(false)}
-              className="spotify-widget-playlists-close"
-              aria-label="Fermer"
-            >
-              ×
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {!selectedPlaylist && (
+                <div className="spotify-widget-playlists-sort" style={{ position: 'relative' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSortMenu(!showSortMenu);
+                    }}
+                    className="spotify-widget-playlists-sort-button"
+                    aria-label="Trier les playlists"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/>
+                    </svg>
+                  </button>
+                  {showSortMenu && (
+                    <div className="spotify-widget-playlists-sort-menu">
+                      <button
+                        onClick={() => handleSortChange('default')}
+                        className={playlistSortBy === 'default' ? 'active' : ''}
+                      >
+                        Par ordre d'ajout
+                      </button>
+                      <button
+                        onClick={() => handleSortChange('name')}
+                        className={playlistSortBy === 'name' ? 'active' : ''}
+                      >
+                        Par nom (A-Z)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => setShowPlaylists(false)}
+                className="spotify-widget-playlists-close"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {!selectedPlaylist ? (
             <div className="spotify-widget-playlists-list">
               {loadingPlaylists ? (
                 <div className="spotify-widget-playlists-loading">Chargement...</div>
-              ) : playlists.length === 0 ? (
+              ) : sortedPlaylists.length === 0 ? (
                 <div className="spotify-widget-playlists-empty">Aucune playlist trouvée</div>
               ) : (
-                playlists.map(playlist => (
+                sortedPlaylists.map(playlist => (
                   <div
                     key={playlist.id}
                     className="spotify-widget-playlist-item"
@@ -926,45 +1068,6 @@ function SpotifyWidget() {
       document.body
     )}
 
-    {/* Modale QR code - rendue via portail */}
-    {showQRCode && qrUrl && createPortal(
-      <div
-        className="spotify-widget-qr-modal"
-        onClick={() => setShowQRCode(false)}
-      >
-        <div className="spotify-widget-qr-content" onClick={(e) => e.stopPropagation()}>
-          <div className="spotify-widget-qr-header">
-            <h2>Ajouter un compte via QR code</h2>
-            <button
-              onClick={() => setShowQRCode(false)}
-              className="spotify-widget-qr-close"
-              aria-label="Fermer"
-            >
-              ×
-            </button>
-          </div>
-          <div className="spotify-widget-qr-body">
-            <p className="spotify-widget-qr-instructions">
-              Scannez ce QR code avec votre téléphone pour ajouter votre compte Spotify au dashboard.
-            </p>
-            <div className="spotify-widget-qr-code-container">
-              <QRCodeSVG
-                value={qrUrl}
-                size={256}
-                level="M"
-                includeMargin={true}
-                fgColor="#1db954"
-                bgColor="#121212"
-              />
-            </div>
-            <p className="spotify-widget-qr-hint">
-              Le QR code expire dans 5 minutes
-            </p>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )}
   </React.Fragment>
   );
 }

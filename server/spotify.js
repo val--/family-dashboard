@@ -2,15 +2,11 @@ const https = require('https');
 const http = require('http');
 const config = require('./config');
 
-// Stockage des tokens d'accès Spotify - Multi-utilisateurs
-// Structure: { userId: { accessToken, refreshToken, expiryTime, userInfo } }
-const spotifyUsers = {};
-let activeUserId = null; // ID de l'utilisateur actuellement actif
-
-// Stockage des tokens temporaires pour l'authentification QR
-// Structure: { token: { createdAt, expiresAt } }
-const qrAuthTokens = {};
-const QR_TOKEN_EXPIRY = 5 * 60 * 1000; // 5 minutes
+// Stockage des tokens d'accès Spotify
+let spotifyAccessToken = null;
+let spotifyRefreshToken = null;
+let tokenExpiryTime = null;
+let currentUserInfo = null; // Infos de l'utilisateur connecté
 
 /**
  * Fait une requête HTTP/HTTPS avec timeout
@@ -88,7 +84,8 @@ function getAuthorizationUrl() {
     'user-read-playback-state',
     'user-modify-playback-state',
     'user-read-currently-playing',
-    'user-read-playback-position'
+    'user-read-playback-position',
+    'user-read-recently-played'
   ].join(' ');
 
   const params = new URLSearchParams({
@@ -96,7 +93,7 @@ function getAuthorizationUrl() {
     response_type: 'code',
     redirect_uri: redirectUri,
     scope: scopes,
-    show_dialog: 'true' // Afficher le dialogue pour permettre de changer de compte
+    show_dialog: 'false'
   });
 
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
@@ -104,7 +101,6 @@ function getAuthorizationUrl() {
 
 /**
  * Échange le code d'autorisation contre un token d'accès
- * Retourne aussi les infos de l'utilisateur
  */
 async function exchangeCodeForToken(code) {
   const clientId = config.spotify?.clientId;
@@ -131,38 +127,23 @@ async function exchangeCodeForToken(code) {
       }).toString()
     });
 
-    const accessToken = response.data.access_token;
-    const refreshToken = response.data.refresh_token;
-    const expiresIn = response.data.expires_in;
+    spotifyAccessToken = response.data.access_token;
+    spotifyRefreshToken = response.data.refresh_token;
+    tokenExpiryTime = Date.now() + (response.data.expires_in * 1000);
 
     // Récupérer les infos de l'utilisateur
-    const userInfo = await getUserInfo(accessToken);
-
-    // Stocker les tokens avec l'ID utilisateur
-    const userId = userInfo.id;
-    spotifyUsers[userId] = {
-      accessToken,
-      refreshToken,
-      expiryTime: Date.now() + (expiresIn * 1000),
-      userInfo: {
-        id: userInfo.id,
-        displayName: userInfo.display_name || userInfo.id,
-        email: userInfo.email,
-        images: userInfo.images
-      }
-    };
-
-    // Définir comme utilisateur actif si c'est le premier
-    if (!activeUserId) {
-      activeUserId = userId;
-    }
+    currentUserInfo = await getUserInfo(spotifyAccessToken);
 
     return {
-      userId,
-      accessToken,
-      refreshToken,
-      expiresIn,
-      userInfo: spotifyUsers[userId].userInfo
+      accessToken: spotifyAccessToken,
+      refreshToken: spotifyRefreshToken,
+      expiresIn: response.data.expires_in,
+      userInfo: {
+        id: currentUserInfo.id,
+        displayName: currentUserInfo.display_name || currentUserInfo.id,
+        email: currentUserInfo.email,
+        images: currentUserInfo.images
+      }
     };
   } catch (error) {
     throw new Error(`Failed to exchange code for token: ${error.message}`);
@@ -186,19 +167,13 @@ async function getUserInfo(accessToken) {
 }
 
 /**
- * Rafraîchit le token d'accès pour un utilisateur spécifique
+ * Rafraîchit le token d'accès
  */
-async function refreshAccessToken(userId = null) {
-  const targetUserId = userId || activeUserId;
-  if (!targetUserId || !spotifyUsers[targetUserId]) {
-    throw new Error('User not found or not authenticated');
-  }
-
-  const user = spotifyUsers[targetUserId];
+async function refreshAccessToken() {
   const clientId = config.spotify?.clientId;
   const clientSecret = config.spotify?.clientSecret;
 
-  if (!clientId || !clientSecret || !user.refreshToken) {
+  if (!clientId || !clientSecret || !spotifyRefreshToken) {
     throw new Error('Spotify tokens not configured');
   }
 
@@ -213,75 +188,62 @@ async function refreshAccessToken(userId = null) {
       },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: user.refreshToken
+        refresh_token: spotifyRefreshToken
       }).toString()
     });
 
-    user.accessToken = response.data.access_token;
+    spotifyAccessToken = response.data.access_token;
     if (response.data.refresh_token) {
-      user.refreshToken = response.data.refresh_token;
+      spotifyRefreshToken = response.data.refresh_token;
     }
-    user.expiryTime = Date.now() + (response.data.expires_in * 1000);
+    tokenExpiryTime = Date.now() + (response.data.expires_in * 1000);
 
-    return user.accessToken;
+    return spotifyAccessToken;
   } catch (error) {
-    // Si le refresh token est invalide, supprimer l'utilisateur
-    delete spotifyUsers[targetUserId];
-    if (activeUserId === targetUserId) {
-      activeUserId = Object.keys(spotifyUsers)[0] || null;
-    }
     throw new Error(`Failed to refresh token: ${error.message}`);
   }
 }
 
 /**
- * Obtient un token d'accès valide pour un utilisateur (rafraîchit si nécessaire)
+ * Obtient un token d'accès valide (rafraîchit si nécessaire)
  */
-async function getValidAccessToken(userId = null) {
-  const targetUserId = userId || activeUserId;
-  if (!targetUserId || !spotifyUsers[targetUserId]) {
+async function getValidAccessToken() {
+  if (!spotifyAccessToken) {
     throw new Error('Not authenticated with Spotify. Please authorize first.');
   }
 
-  const user = spotifyUsers[targetUserId];
-
   // Rafraîchir le token s'il expire dans moins de 5 minutes
-  if (user.expiryTime && Date.now() > (user.expiryTime - 5 * 60 * 1000)) {
-    await refreshAccessToken(targetUserId);
+  if (tokenExpiryTime && Date.now() > (tokenExpiryTime - 5 * 60 * 1000)) {
+    await refreshAccessToken();
   }
 
-  return user.accessToken;
+  return spotifyAccessToken;
 }
 
 /**
- * Fait une requête à l'API Spotify pour un utilisateur spécifique
+ * Fait une requête à l'API Spotify
  */
 async function makeSpotifyRequest(endpoint, options = {}) {
-  const userId = options.userId || null;
-  const token = await getValidAccessToken(userId);
+  const token = await getValidAccessToken();
 
   const url = endpoint.startsWith('http') ? endpoint : `https://api.spotify.com/v1${endpoint}`;
 
-  // Retirer userId des options pour ne pas l'envoyer dans la requête
-  const { userId: _, ...requestOptions } = options;
-
   return makeRequest(url, {
-    ...requestOptions,
+    ...options,
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...requestOptions.headers
+      ...options.headers
     }
   });
 }
 
 /**
- * Récupère le morceau actuellement joué pour un utilisateur
+ * Récupère le morceau actuellement joué
  */
-async function getCurrentlyPlaying(userId = null) {
+async function getCurrentlyPlaying() {
   try {
     const response = await makeSpotifyRequest('/me/player/currently-playing', {
-      userId,
       timeout: 10000 // 10 secondes
     });
     
@@ -317,6 +279,8 @@ async function getCurrentlyPlaying(userId = null) {
     if (error.message.includes('401') || error.message.includes('403')) {
       // Token expiré ou invalide
       spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
       throw new Error('Authentication expired. Please re-authorize.');
     }
     throw error;
@@ -324,11 +288,60 @@ async function getCurrentlyPlaying(userId = null) {
 }
 
 /**
+ * Récupère le dernier morceau joué
+ */
+async function getRecentlyPlayed(limit = 1) {
+  try {
+    const response = await makeSpotifyRequest(`/me/player/recently-played?limit=${limit}`, {
+      timeout: 10000 // 10 secondes
+    });
+    
+    if (!response.data || !response.data.items || response.data.items.length === 0) {
+      return null;
+    }
+
+    // Récupérer le premier élément (le plus récent)
+    const recentTrack = response.data.items[0].track;
+    
+    // Utiliser la plus grande image disponible (première de la liste)
+    let albumArt = null;
+    if (recentTrack.album.images && recentTrack.album.images.length > 0) {
+      albumArt = recentTrack.album.images[0].url;
+    }
+    
+    return {
+      name: recentTrack.name,
+      artists: recentTrack.artists.map(a => a.name).join(', '),
+      album: recentTrack.album.name,
+      albumArt: albumArt,
+      duration: recentTrack.duration_ms,
+      uri: recentTrack.uri,
+      playedAt: response.data.items[0].played_at
+    };
+  } catch (error) {
+    // Gestion spécifique des erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout') || error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH') {
+      throw new Error('Network error: Unable to connect to Spotify. Please check your internet connection.');
+    }
+    if (error.message.includes('401') || error.message.includes('403')) {
+      // Token expiré ou invalide
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    // Si l'erreur n'est pas critique, retourner null plutôt que de throw
+    console.error('Error fetching recently played:', error);
+    return null;
+  }
+}
+
+/**
  * Met en pause la lecture
  */
-async function pausePlayback(userId = null) {
+async function pausePlayback() {
   try {
-    await makeSpotifyRequest('/me/player/pause', { userId, method: 'PUT' });
+    await makeSpotifyRequest('/me/player/pause', { method: 'PUT' });
     return { success: true };
   } catch (error) {
     if (error.message.includes('404')) {
@@ -341,9 +354,9 @@ async function pausePlayback(userId = null) {
 /**
  * Reprend la lecture
  */
-async function resumePlayback(userId = null) {
+async function resumePlayback() {
   try {
-    await makeSpotifyRequest('/me/player/play', { userId, method: 'PUT' });
+    await makeSpotifyRequest('/me/player/play', { method: 'PUT' });
     return { success: true };
   } catch (error) {
     if (error.message.includes('404')) {
@@ -356,9 +369,9 @@ async function resumePlayback(userId = null) {
 /**
  * Passe au morceau suivant
  */
-async function skipToNext(userId = null) {
+async function skipToNext() {
   try {
-    await makeSpotifyRequest('/me/player/next', { userId, method: 'POST' });
+    await makeSpotifyRequest('/me/player/next', { method: 'POST' });
     return { success: true };
   } catch (error) {
     if (error.message.includes('404')) {
@@ -371,9 +384,9 @@ async function skipToNext(userId = null) {
 /**
  * Passe au morceau précédent
  */
-async function skipToPrevious(userId = null) {
+async function skipToPrevious() {
   try {
-    await makeSpotifyRequest('/me/player/previous', { userId, method: 'POST' });
+    await makeSpotifyRequest('/me/player/previous', { method: 'POST' });
     return { success: true };
   } catch (error) {
     if (error.message.includes('404')) {
@@ -386,10 +399,9 @@ async function skipToPrevious(userId = null) {
 /**
  * Récupère la liste des appareils disponibles
  */
-async function getDevices(userId = null) {
+async function getDevices() {
   try {
     const response = await makeSpotifyRequest('/me/player/devices', {
-      userId,
       timeout: 10000 // 10 secondes
     });
     
@@ -413,13 +425,39 @@ async function getDevices(userId = null) {
       throw new Error('Network error: Unable to connect to Spotify. Please check your internet connection.');
     }
     if (error.message.includes('401') || error.message.includes('403')) {
-      const targetUserId = userId || activeUserId;
-      if (targetUserId && spotifyUsers[targetUserId]) {
-        delete spotifyUsers[targetUserId];
-        if (activeUserId === targetUserId) {
-          activeUserId = Object.keys(spotifyUsers)[0] || null;
-        }
-      }
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Change le volume de l'appareil actif
+ */
+async function setVolume(volumePercent, deviceId = null) {
+  try {
+    const params = new URLSearchParams({ volume_percent: volumePercent.toString() });
+    if (deviceId) {
+      params.append('device_id', deviceId);
+    }
+    
+    await makeSpotifyRequest(`/me/player/volume?${params.toString()}`, {
+      method: 'PUT',
+      timeout: 10000
+    });
+    
+    return { success: true };
+  } catch (error) {
+    if (error.message.includes('404')) {
+      return { success: false, error: 'No active device found' };
+    }
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
       throw new Error('Authentication expired. Please re-authorize.');
     }
     throw error;
@@ -429,10 +467,9 @@ async function getDevices(userId = null) {
 /**
  * Transfère la lecture vers un appareil spécifique
  */
-async function transferPlayback(deviceId, play = false, userId = null) {
+async function transferPlayback(deviceId, play = false) {
   try {
     await makeSpotifyRequest('/me/player', {
-      userId,
       method: 'PUT',
       body: JSON.stringify({
         device_ids: [deviceId],
@@ -456,10 +493,9 @@ async function transferPlayback(deviceId, play = false, userId = null) {
 /**
  * Récupère les playlists de l'utilisateur
  */
-async function getUserPlaylists(limit = 50, offset = 0, userId = null) {
+async function getUserPlaylists(limit = 50, offset = 0) {
   try {
     const response = await makeSpotifyRequest(`/me/playlists?limit=${limit}&offset=${offset}`, {
-      userId,
       timeout: 10000
     });
     
@@ -483,13 +519,9 @@ async function getUserPlaylists(limit = 50, offset = 0, userId = null) {
     };
   } catch (error) {
     if (error.message.includes('401') || error.message.includes('403')) {
-      const targetUserId = userId || activeUserId;
-      if (targetUserId && spotifyUsers[targetUserId]) {
-        delete spotifyUsers[targetUserId];
-        if (activeUserId === targetUserId) {
-          activeUserId = Object.keys(spotifyUsers)[0] || null;
-        }
-      }
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
       throw new Error('Authentication expired. Please re-authorize.');
     }
     throw error;
@@ -533,10 +565,9 @@ async function getFeaturedPlaylists(limit = 50, offset = 0) {
 /**
  * Récupère les morceaux d'une playlist
  */
-async function getPlaylistTracks(playlistId, limit = 100, offset = 0, userId = null) {
+async function getPlaylistTracks(playlistId, limit = 100, offset = 0) {
   try {
     const response = await makeSpotifyRequest(`/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`, {
-      userId,
       timeout: 10000
     });
     
@@ -564,13 +595,9 @@ async function getPlaylistTracks(playlistId, limit = 100, offset = 0, userId = n
     };
   } catch (error) {
     if (error.message.includes('401') || error.message.includes('403')) {
-      const targetUserId = userId || activeUserId;
-      if (targetUserId && spotifyUsers[targetUserId]) {
-        delete spotifyUsers[targetUserId];
-        if (activeUserId === targetUserId) {
-          activeUserId = Object.keys(spotifyUsers)[0] || null;
-        }
-      }
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
       throw new Error('Authentication expired. Please re-authorize.');
     }
     throw error;
@@ -580,7 +607,7 @@ async function getPlaylistTracks(playlistId, limit = 100, offset = 0, userId = n
 /**
  * Lance une playlist ou un morceau spécifique
  */
-async function playPlaylist(playlistUri, deviceId = null, userId = null) {
+async function playPlaylist(playlistUri, deviceId = null) {
   try {
     const body = {
       context_uri: playlistUri
@@ -591,7 +618,6 @@ async function playPlaylist(playlistUri, deviceId = null, userId = null) {
     }
 
     await makeSpotifyRequest('/me/player/play', {
-      userId,
       method: 'PUT',
       body: JSON.stringify(body),
       timeout: 15000
@@ -608,7 +634,7 @@ async function playPlaylist(playlistUri, deviceId = null, userId = null) {
 /**
  * Lance un morceau spécifique
  */
-async function playTrack(trackUri, deviceId = null, userId = null) {
+async function playTrack(trackUri, deviceId = null) {
   try {
     const body = {
       uris: [trackUri]
@@ -619,7 +645,6 @@ async function playTrack(trackUri, deviceId = null, userId = null) {
     }
 
     await makeSpotifyRequest('/me/player/play', {
-      userId,
       method: 'PUT',
       body: JSON.stringify(body),
       timeout: 15000
@@ -634,187 +659,54 @@ async function playTrack(trackUri, deviceId = null, userId = null) {
 }
 
 /**
- * Vérifie si un utilisateur est authentifié
+ * Vérifie si l'utilisateur est authentifié
  */
-function isAuthenticated(userId = null) {
-  const targetUserId = userId || activeUserId;
-  return !!(targetUserId && spotifyUsers[targetUserId]);
+function isAuthenticated() {
+  return !!spotifyAccessToken;
 }
 
 /**
  * Définit les tokens (utilisé après l'authentification OAuth)
- * @deprecated Utiliser exchangeCodeForToken qui gère automatiquement le stockage
  */
 function setTokens(accessToken, refreshToken, expiresIn) {
-  // Cette fonction est conservée pour compatibilité mais ne devrait plus être utilisée
-  // Le stockage se fait maintenant via exchangeCodeForToken
-  console.warn('setTokens is deprecated. Use exchangeCodeForToken instead.');
+  spotifyAccessToken = accessToken;
+  spotifyRefreshToken = refreshToken;
+  tokenExpiryTime = Date.now() + (expiresIn * 1000);
 }
 
 /**
- * Récupère la liste de tous les utilisateurs connectés
+ * Récupère les informations de l'utilisateur connecté
  */
-function getUsers() {
-  return Object.keys(spotifyUsers).map(userId => ({
-    id: userId,
-    displayName: spotifyUsers[userId].userInfo.displayName,
-    email: spotifyUsers[userId].userInfo.email,
-    images: spotifyUsers[userId].userInfo.images,
-    isActive: userId === activeUserId
-  }));
-}
-
-/**
- * Définit l'utilisateur actif
- */
-function setActiveUser(userId) {
-  if (!spotifyUsers[userId]) {
-    throw new Error('User not found');
-  }
-  activeUserId = userId;
-  return { success: true, activeUserId };
-}
-
-/**
- * Supprime un utilisateur
- */
-function removeUser(userId) {
-  if (!spotifyUsers[userId]) {
-    throw new Error('User not found');
-  }
-  delete spotifyUsers[userId];
-  // Si c'était l'utilisateur actif, passer au suivant ou null
-  if (activeUserId === userId) {
-    activeUserId = Object.keys(spotifyUsers)[0] || null;
-  }
-  return { success: true, activeUserId };
-}
-
-/**
- * Récupère l'utilisateur actif
- */
-function getActiveUser() {
-  if (!activeUserId || !spotifyUsers[activeUserId]) {
+function getCurrentUser() {
+  if (!currentUserInfo) {
     return null;
   }
   return {
-    id: activeUserId,
-    ...spotifyUsers[activeUserId].userInfo
+    id: currentUserInfo.id,
+    displayName: currentUserInfo.display_name || currentUserInfo.id,
+    email: currentUserInfo.email,
+    images: currentUserInfo.images
   };
-}
-
-/**
- * Génère un token temporaire pour l'authentification QR
- */
-function generateQRAuthToken() {
-  const crypto = require('crypto');
-  const token = crypto.randomBytes(32).toString('hex');
-  const now = Date.now();
-  
-  qrAuthTokens[token] = {
-    createdAt: now,
-    expiresAt: now + QR_TOKEN_EXPIRY
-  };
-  
-  // Nettoyer les tokens expirés
-  cleanupExpiredQRTokens();
-  
-  return token;
-}
-
-/**
- * Vérifie si un token QR est valide
- */
-function isValidQRAuthToken(token) {
-  cleanupExpiredQRTokens();
-  const qrToken = qrAuthTokens[token];
-  if (!qrToken) {
-    return false;
-  }
-  if (Date.now() > qrToken.expiresAt) {
-    delete qrAuthTokens[token];
-    return false;
-  }
-  return true;
-}
-
-/**
- * Consomme un token QR (le supprime après utilisation)
- */
-function consumeQRAuthToken(token) {
-  if (isValidQRAuthToken(token)) {
-    delete qrAuthTokens[token];
-    return true;
-  }
-  return false;
-}
-
-/**
- * Nettoie les tokens QR expirés
- */
-function cleanupExpiredQRTokens() {
-  const now = Date.now();
-  Object.keys(qrAuthTokens).forEach(token => {
-    if (now > qrAuthTokens[token].expiresAt) {
-      delete qrAuthTokens[token];
-    }
-  });
-}
-
-/**
- * Génère l'URL d'authentification avec un token QR
- */
-function getQRAuthorizationUrl(qrToken) {
-  const clientId = config.spotify?.clientId;
-  if (!clientId) {
-    throw new Error('Spotify Client ID not configured');
-  }
-
-  const redirectUri = config.spotify?.redirectUri || 'http://localhost:5000/api/spotify/callback';
-  const scopes = [
-    'user-read-playback-state',
-    'user-modify-playback-state',
-    'user-read-currently-playing',
-    'user-read-playback-position',
-    'playlist-read-private',
-    'playlist-read-collaborative'
-  ].join(' ');
-
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: 'code',
-    redirect_uri: `${redirectUri}?qr_token=${qrToken}`,
-    scope: scopes,
-    show_dialog: 'true'
-  });
-
-  return `https://accounts.spotify.com/authorize?${params.toString()}`;
 }
 
 module.exports = {
   getAuthorizationUrl,
   exchangeCodeForToken,
   getCurrentlyPlaying,
+  getRecentlyPlayed,
   pausePlayback,
   resumePlayback,
   skipToNext,
   skipToPrevious,
   getDevices,
   transferPlayback,
+  setVolume,
   getUserPlaylists,
-  getFeaturedPlaylists,
   getPlaylistTracks,
   playPlaylist,
   playTrack,
   isAuthenticated,
   setTokens,
-  getUsers,
-  setActiveUser,
-  removeUser,
-  getActiveUser,
-  generateQRAuthToken,
-  isValidQRAuthToken,
-  consumeQRAuthToken,
-  getQRAuthorizationUrl
+  getCurrentUser
 };
 
