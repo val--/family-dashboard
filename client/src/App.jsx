@@ -381,11 +381,11 @@ function HuePage() {
 
 function App() {
   // Activer l'écran de veille après le délai d'inactivité configuré
-  const isScreensaverActive = useScreensaver(SCREENSAVER_IDLE_TIME);
+  const { isScreensaverActive, registerActivity } = useScreensaver(SCREENSAVER_IDLE_TIME);
 
   return (
     <Router>
-      {isScreensaverActive && <Screensaver />}
+      {isScreensaverActive && <Screensaver onExit={registerActivity} />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<CalendarPage />} />
