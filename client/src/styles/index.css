@@ -1016,6 +1016,40 @@ body {
   }
 }
 
+@media (max-width: 1024px) {
+  .screensaver-weather {
+    top: 28px;
+    right: 28px;
+    font-size: 16px;
+  }
+
+  .screensaver-weather-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .screensaver-weather-temp {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 768px) {
+  .screensaver-weather {
+    top: 20px;
+    right: 20px;
+    font-size: 15px;
+  }
+
+  .screensaver-weather-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .screensaver-weather-temp {
+    font-size: 30px;
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -3194,6 +3228,47 @@ body {
   font-weight: 400;
   opacity: 0.8;
   text-transform: capitalize;
+}
+
+.screensaver-weather {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff;
+  opacity: 0.9;
+  font-size: 18px;
+  text-align: right;
+  pointer-events: none;
+}
+
+.screensaver-weather-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.4));
+}
+
+.screensaver-weather-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.screensaver-weather-city {
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.screensaver-weather-temp {
+  font-size: 46px;
+  font-weight: 300;
+  letter-spacing: -1px;
 }
 
 @keyframes fadeIn {

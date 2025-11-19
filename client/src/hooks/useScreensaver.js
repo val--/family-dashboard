@@ -16,12 +16,6 @@ export function useScreensaver(idleTime = 5000) {
   }, [isScreensaverActive]);
 
   const resetTimer = useCallback(() => {
-    // Ne rien faire si l'écran de veille est actif
-    // Le composant Screensaver gère la sortie du mode veille
-    if (isScreensaverActiveRef.current) {
-      return;
-    }
-
     // Réinitialiser le timer
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -34,15 +28,23 @@ export function useScreensaver(idleTime = 5000) {
   }, [idleTime]);
 
   const exitScreensaver = useCallback(() => {
-    // Désactiver l'écran de veille
+    // Désactiver l'écran de veille et synchroniser la ref immédiatement
+    isScreensaverActiveRef.current = false;
     setIsScreensaverActive(false);
-    // Réinitialiser le timer pour reprogrammer l'activation
-    resetTimer();
+
+    // Réinitialiser le timer sur la frame suivante pour garantir la mise à jour
+    requestAnimationFrame(() => {
+      resetTimer();
+    });
   }, [resetTimer]);
 
   useEffect(() => {
+    // Ne rien écouter lorsque l'écran de veille est actif
+    if (isScreensaverActive) {
+      return;
+    }
+
     // Événements à écouter pour détecter l'activité
-    // Seulement quand l'écran de veille n'est PAS actif
     const events = [
       'mousedown',
       'mousemove',
@@ -70,7 +72,7 @@ export function useScreensaver(idleTime = 5000) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [idleTime, resetTimer]);
+  }, [idleTime, resetTimer, isScreensaverActive]);
 
   return {
     isScreensaverActive,

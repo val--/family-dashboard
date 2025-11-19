@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { REFRESH_INTERVAL } from '../../constants';
 
 /**
  * Composant d'écran de veille
@@ -7,6 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 function Screensaver({ onExit }) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const shouldExitRef = useRef(false);
+  const [weatherInfo, setWeatherInfo] = useState(null);
 
   useEffect(() => {
     // Mettre à jour l'heure chaque seconde
@@ -36,6 +38,35 @@ function Screensaver({ onExit }) {
     };
     return date.toLocaleDateString('fr-FR', options);
   };
+
+  const fetchWeather = useCallback(async () => {
+    try {
+      const response = await fetch('/api/weather');
+      if (!response.ok) {
+        throw new Error('Weather fetch failed');
+      }
+      const result = await response.json();
+      if (result.success && result.data?.current) {
+        const current = result.data.current;
+        setWeatherInfo({
+          temp: current.temp,
+          icon: current.icon,
+          city: result.data.city,
+        });
+      } else {
+        setWeatherInfo(null);
+      }
+    } catch (error) {
+      console.error('Erreur météo écran de veille:', error);
+      setWeatherInfo(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWeather();
+    const interval = setInterval(fetchWeather, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchWeather]);
 
   useEffect(() => {
     const stopEvent = (event) => {
@@ -146,6 +177,26 @@ function Screensaver({ onExit }) {
         <div className="screensaver-time">{formatTime(currentTime)}</div>
         <div className="screensaver-date">{formatDate(currentTime)}</div>
       </div>
+      {weatherInfo && (
+        <div className="screensaver-weather" aria-live="polite">
+          {weatherInfo.icon && (
+            <img
+              src={`https://openweathermap.org/img/wn/${weatherInfo.icon}@2x.png`}
+              alt=""
+              className="screensaver-weather-icon"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          )}
+          <div className="screensaver-weather-text">
+            <span className="screensaver-weather-city">{weatherInfo.city}</span>
+            <span className="screensaver-weather-temp">
+              {Math.round(weatherInfo.temp)}°
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
