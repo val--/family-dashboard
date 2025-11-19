@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * Widget Spotify pour afficher le morceau actuellement joué
@@ -11,6 +12,15 @@ function SpotifyWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isStartingPlayback, setIsStartingPlayback] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [showDevices, setShowDevices] = useState(false);
+  const [activeDeviceId, setActiveDeviceId] = useState(null);
+  const [showPlaylists, setShowPlaylists] = useState(false);
+  const [playlists, setPlaylists] = useState([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [playlistTracks, setPlaylistTracks] = useState([]);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
 
   // Vérifier l'authentification et récupérer le statut
   const fetchStatus = useCallback(async () => {
@@ -28,11 +38,16 @@ function SpotifyWidget() {
       if (data.authenticated) {
         setIsPlaying(data.isPlaying);
         setTrack(data.track);
+        // Si on a récupéré un track, on n'est plus en train de lancer
+        if (data.track) {
+          setIsStartingPlayback(false);
+        }
       }
     } catch (err) {
       console.error('Erreur lors de la récupération du statut Spotify:', err);
       setError(err.message);
       setIsAuthenticated(false);
+      setIsStartingPlayback(false);
     } finally {
       setLoading(false);
     }
@@ -193,15 +208,206 @@ function SpotifyWidget() {
     }
   };
 
+  // Récupérer les appareils disponibles
+  const fetchDevices = useCallback(async () => {
+    try {
+      const response = await fetch('/api/spotify/devices');
+      const data = await response.json();
+
+      if (data.success && data.devices) {
+        setDevices(data.devices);
+        const activeDevice = data.devices.find(d => d.isActive);
+        if (activeDevice) {
+          setActiveDeviceId(activeDevice.id);
+        }
+      }
+    } catch (err) {
+      console.error('Erreur lors de la récupération des appareils:', err);
+    }
+  }, []);
+
+  // Transférer la lecture vers un appareil
+  const handleTransferDevice = async (deviceId) => {
+    try {
+      setIsTransitioning(true);
+      const response = await fetch('/api/spotify/transfer', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, play: isPlaying })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setActiveDeviceId(deviceId);
+        setShowDevices(false);
+        // Rafraîchir le statut après un court délai
+        setTimeout(async () => {
+          await fetchStatus();
+          await fetchDevices();
+          setIsTransitioning(false);
+        }, 500);
+      } else {
+        setError(data.error || 'Failed to transfer playback');
+        setIsTransitioning(false);
+      }
+    } catch (err) {
+      console.error('Erreur lors du transfert:', err);
+      setError(err.message);
+      setIsTransitioning(false);
+    }
+  };
+
+  // Récupérer les playlists de l'utilisateur
+  const fetchPlaylists = useCallback(async () => {
+    try {
+      setLoadingPlaylists(true);
+      const response = await fetch('/api/spotify/playlists?type=user&limit=50');
+      const data = await response.json();
+
+      if (data.success && data.playlists) {
+        setPlaylists(data.playlists);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la récupération des playlists:', err);
+      setError(err.message);
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  }, []);
+
+  // Récupérer les morceaux d'une playlist
+  const fetchPlaylistTracks = useCallback(async (playlistId) => {
+    try {
+      setLoadingPlaylists(true);
+      const response = await fetch(`/api/spotify/playlists/${playlistId}/tracks?limit=100`);
+      const data = await response.json();
+
+      if (data.success && data.tracks) {
+        setPlaylistTracks(data.tracks);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la récupération des morceaux:', err);
+      setError(err.message);
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  }, []);
+
+  // Lancer une playlist
+  const handlePlayPlaylist = async (playlistUri) => {
+    try {
+      setIsTransitioning(true);
+      setIsStartingPlayback(true);
+      const response = await fetch('/api/spotify/play/playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistUri, deviceId: activeDeviceId })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setShowPlaylists(false);
+        setSelectedPlaylist(null);
+        // Attendre un peu plus longtemps pour que Spotify démarre la lecture
+        setTimeout(async () => {
+          await fetchStatus();
+          // Si toujours pas de track après 2 secondes, réessayer une fois
+          setTimeout(async () => {
+            await fetchStatus();
+            setIsTransitioning(false);
+          }, 2000);
+        }, 1500);
+      } else {
+        setError(data.error || 'Failed to play playlist');
+        setIsTransitioning(false);
+        setIsStartingPlayback(false);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la lecture de la playlist:', err);
+      setError(err.message);
+      setIsTransitioning(false);
+      setIsStartingPlayback(false);
+    }
+  };
+
+  // Lancer un morceau
+  const handlePlayTrack = async (trackUri) => {
+    try {
+      setIsTransitioning(true);
+      setIsStartingPlayback(true);
+      const response = await fetch('/api/spotify/play/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackUri, deviceId: activeDeviceId })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setShowPlaylists(false);
+        setSelectedPlaylist(null);
+        // Attendre un peu plus longtemps pour que Spotify démarre la lecture
+        setTimeout(async () => {
+          await fetchStatus();
+          // Si toujours pas de track après 2 secondes, réessayer une fois
+          setTimeout(async () => {
+            await fetchStatus();
+            setIsTransitioning(false);
+          }, 2000);
+        }, 1500);
+      } else {
+        setError(data.error || 'Failed to play track');
+        setIsTransitioning(false);
+        setIsStartingPlayback(false);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la lecture du morceau:', err);
+      setError(err.message);
+      setIsTransitioning(false);
+      setIsStartingPlayback(false);
+    }
+  };
+
+  // Ouvrir la modale des playlists
+  const handleOpenPlaylists = () => {
+    setShowPlaylists(true);
+    setSelectedPlaylist(null);
+    setPlaylistTracks([]);
+    fetchPlaylists();
+  };
+
+  // Sélectionner une playlist
+  const handleSelectPlaylist = (playlist) => {
+    setSelectedPlaylist(playlist);
+    fetchPlaylistTracks(playlist.id);
+  };
+
+  // Fermer le menu des appareils en cliquant en dehors
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDevices && !event.target.closest('.spotify-widget-device-selector')) {
+        setShowDevices(false);
+      }
+    };
+
+    if (showDevices) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showDevices]);
+
   // Charger le statut au montage et périodiquement
   useEffect(() => {
     fetchStatus();
+    fetchDevices();
     
     // Rafraîchir toutes les 5 secondes
-    const interval = setInterval(fetchStatus, 5000);
+    const interval = setInterval(() => {
+      fetchStatus();
+      fetchDevices();
+    }, 5000);
     
     return () => clearInterval(interval);
-  }, [fetchStatus]);
+  }, [fetchStatus, fetchDevices]);
 
   if (loading) {
     return (
@@ -245,6 +451,19 @@ function SpotifyWidget() {
   }
 
   if (!track) {
+    // Si on est en train de lancer une lecture, afficher un message de chargement
+    if (isStartingPlayback) {
+      return (
+        <div className="spotify-widget">
+          <div className="spotify-widget-content">
+            <div className="spotify-widget-no-track">
+              <div className="spotify-widget-loading">Lancement en cours...</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="spotify-widget">
         <div className="spotify-widget-content">
@@ -259,6 +478,7 @@ function SpotifyWidget() {
   }
 
   return (
+    <React.Fragment>
     <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
       <div className="spotify-widget-content">
         {track.albumArt && (
@@ -272,6 +492,42 @@ function SpotifyWidget() {
           <div className="spotify-widget-artist">{track.artists}</div>
           <div className="spotify-widget-album">{track.album}</div>
         </div>
+
+        {devices.length > 0 && (
+          <div className="spotify-widget-device-selector">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDevices(!showDevices);
+              }}
+              className="spotify-widget-device-button"
+              disabled={isTransitioning}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+              </svg>
+              {devices.find(d => d.id === activeDeviceId)?.name || 'Sélectionner un appareil'}
+            </button>
+            {showDevices && (
+              <div className="spotify-widget-devices-list">
+                {devices.map(device => (
+                  <button
+                    key={device.id}
+                    onClick={() => handleTransferDevice(device.id)}
+                    className={`spotify-widget-device-item ${device.id === activeDeviceId ? 'active' : ''}`}
+                    disabled={isTransitioning || device.id === activeDeviceId}
+                  >
+                    <span className="spotify-widget-device-name">{device.name}</span>
+                    <span className="spotify-widget-device-type">{device.type}</span>
+                    {device.id === activeDeviceId && (
+                      <span className="spotify-widget-device-active">●</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="spotify-widget-controls">
           <button
@@ -314,7 +570,122 @@ function SpotifyWidget() {
           </button>
         </div>
       </div>
+
+      {/* Bouton pour ouvrir les playlists */}
+      <button
+        onClick={handleOpenPlaylists}
+        className="spotify-widget-playlists-button"
+        disabled={isTransitioning}
+        aria-label="Ouvrir les playlists"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm3-10h13v2H7zm0 5h13v2H7zm0 5h13v2H7z"/>
+        </svg>
+      </button>
     </div>
+
+    {/* Modale des playlists - rendue via portail */}
+    {showPlaylists && createPortal(
+      <div 
+        className="spotify-widget-playlists-modal" 
+        onClick={() => setShowPlaylists(false)}
+      >
+        <div className="spotify-widget-playlists-content" onClick={(e) => e.stopPropagation()}>
+          <div className="spotify-widget-playlists-header">
+            <h2>Mes playlists</h2>
+            <button
+              onClick={() => setShowPlaylists(false)}
+              className="spotify-widget-playlists-close"
+              aria-label="Fermer"
+            >
+              ×
+            </button>
+          </div>
+
+          {!selectedPlaylist ? (
+            <div className="spotify-widget-playlists-list">
+              {loadingPlaylists ? (
+                <div className="spotify-widget-playlists-loading">Chargement...</div>
+              ) : playlists.length === 0 ? (
+                <div className="spotify-widget-playlists-empty">Aucune playlist trouvée</div>
+              ) : (
+                playlists.map(playlist => (
+                  <div
+                    key={playlist.id}
+                    className="spotify-widget-playlist-item"
+                    onClick={() => handleSelectPlaylist(playlist)}
+                  >
+                    {playlist.image && (
+                      <img src={playlist.image} alt={playlist.name} className="spotify-widget-playlist-image" />
+                    )}
+                    <div className="spotify-widget-playlist-info">
+                      <div className="spotify-widget-playlist-name">{playlist.name}</div>
+                      <div className="spotify-widget-playlist-meta">
+                        {playlist.owner} • {playlist.tracksCount} morceaux
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="spotify-widget-playlist-header">
+                {selectedPlaylist.image && (
+                  <img src={selectedPlaylist.image} alt={selectedPlaylist.name} className="spotify-widget-playlist-header-image" />
+                )}
+                <div className="spotify-widget-playlist-header-info">
+                  <h3>{selectedPlaylist.name}</h3>
+                  <p>{selectedPlaylist.owner} • {selectedPlaylist.tracksCount} morceaux</p>
+                  <button
+                    onClick={() => handlePlayPlaylist(selectedPlaylist.uri)}
+                    className="spotify-widget-playlist-play-button"
+                    disabled={isTransitioning}
+                  >
+                    ▶ Lire
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedPlaylist(null);
+                    setPlaylistTracks([]);
+                  }}
+                  className="spotify-widget-playlist-back"
+                >
+                  ← Retour
+                </button>
+              </div>
+
+              <div className="spotify-widget-playlist-tracks">
+                {loadingPlaylists ? (
+                  <div className="spotify-widget-playlists-loading">Chargement...</div>
+                ) : playlistTracks.length === 0 ? (
+                  <div className="spotify-widget-playlists-empty">Aucun morceau</div>
+                ) : (
+                  playlistTracks.map(track => (
+                    <div
+                      key={track.id}
+                      className="spotify-widget-track-item"
+                      onClick={() => handlePlayTrack(track.uri)}
+                    >
+                      {track.albumArt && (
+                        <img src={track.albumArt} alt={track.album} className="spotify-widget-track-image" />
+                      )}
+                      <div className="spotify-widget-track-info">
+                        <div className="spotify-widget-track-name">{track.name}</div>
+                        <div className="spotify-widget-track-artist">{track.artists}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>,
+      document.body
+    )}
+  </React.Fragment>
   );
 }
 

@@ -455,7 +455,12 @@ app.get('/api/spotify/status', async (req, res) => {
     res.json({ ...playback, authenticated: true, success: true });
   } catch (error) {
     console.error('Error fetching Spotify status:', error);
-    res.status(500).json({ error: error.message, success: false });
+    // Améliorer les messages d'erreur pour les erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout')) {
+      res.status(503).json({ error: error.message, success: false });
+    } else {
+      res.status(500).json({ error: error.message, success: false });
+    }
   }
 });
 
@@ -495,6 +500,119 @@ app.post('/api/spotify/previous', async (req, res) => {
     res.json({ ...result, success: true });
   } catch (error) {
     console.error('Error skipping to previous track:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.get('/api/spotify/devices', async (req, res) => {
+  try {
+    if (!spotifyService.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated', success: false });
+    }
+
+    const result = await spotifyService.getDevices();
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error fetching Spotify devices:', error);
+    // Améliorer les messages d'erreur pour les erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout')) {
+      res.status(503).json({ error: error.message, success: false });
+    } else {
+      res.status(500).json({ error: error.message, success: false });
+    }
+  }
+});
+
+app.put('/api/spotify/transfer', async (req, res) => {
+  try {
+    if (!spotifyService.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated', success: false });
+    }
+
+    const { deviceId, play } = req.body;
+
+    if (!deviceId) {
+      return res.status(400).json({ error: 'Device ID is required', success: false });
+    }
+
+    const result = await spotifyService.transferPlayback(deviceId, play || false);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error transferring Spotify playback:', error);
+    // Améliorer les messages d'erreur pour les erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout')) {
+      res.status(503).json({ error: 'Network error: Unable to connect to Spotify. Please check your internet connection.', success: false });
+    } else {
+      res.status(500).json({ error: error.message, success: false });
+    }
+  }
+});
+
+// Routes playlists (seulement les playlists utilisateur)
+app.get('/api/spotify/playlists', async (req, res) => {
+  try {
+    if (!spotifyService.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated', success: false });
+    }
+
+    // Seulement les playlists utilisateur (pas les playlists Spotify)
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const result = await spotifyService.getUserPlaylists(limit, offset);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error fetching playlists:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.get('/api/spotify/playlists/:playlistId/tracks', async (req, res) => {
+  try {
+    if (!spotifyService.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated', success: false });
+    }
+
+    const { playlistId } = req.params;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const result = await spotifyService.getPlaylistTracks(playlistId, limit, offset);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error fetching playlist tracks:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/play/playlist', async (req, res) => {
+  try {
+    const { playlistUri, deviceId } = req.body;
+
+    if (!playlistUri) {
+      return res.status(400).json({ error: 'Playlist URI is required', success: false });
+    }
+
+    const result = await spotifyService.playPlaylist(playlistUri, deviceId);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error playing playlist:', error);
+    res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/play/track', async (req, res) => {
+  try {
+    const { trackUri, deviceId } = req.body;
+
+    if (!trackUri) {
+      return res.status(400).json({ error: 'Track URI is required', success: false });
+    }
+
+    const result = await spotifyService.playTrack(trackUri, deviceId);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error playing track:', error);
     res.status(500).json({ error: error.message, success: false });
   }
 });

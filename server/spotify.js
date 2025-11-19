@@ -8,12 +8,13 @@ let spotifyRefreshToken = null;
 let tokenExpiryTime = null;
 
 /**
- * Fait une requête HTTP/HTTPS
+ * Fait une requête HTTP/HTTPS avec timeout
  */
 function makeRequest(url, options = {}) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
     const protocol = urlObj.protocol === 'https:' ? https : http;
+    const timeout = options.timeout || 10000; // 10 secondes par défaut
     
     const requestOptions = {
       hostname: urlObj.hostname,
@@ -23,7 +24,8 @@ function makeRequest(url, options = {}) {
       headers: {
         'User-Agent': 'Mozilla/5.0',
         ...options.headers
-      }
+      },
+      timeout: timeout
     };
 
     const req = protocol.request(requestOptions, (res) => {
@@ -46,7 +48,17 @@ function makeRequest(url, options = {}) {
     });
 
     req.on('error', (error) => {
-      reject(error);
+      // Améliorer les messages d'erreur pour les erreurs réseau
+      if (error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH') {
+        reject(new Error(`Network error: Unable to connect to ${urlObj.hostname}. Please check your internet connection.`));
+      } else {
+        reject(error);
+      }
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error(`Request timeout: Connection to ${urlObj.hostname} timed out after ${timeout}ms`));
     });
 
     if (options.body) {
@@ -70,7 +82,8 @@ function getAuthorizationUrl() {
   const scopes = [
     'user-read-playback-state',
     'user-modify-playback-state',
-    'user-read-currently-playing'
+    'user-read-currently-playing',
+    'user-read-playback-position'
   ].join(' ');
 
   const params = new URLSearchParams({
@@ -203,7 +216,9 @@ async function makeSpotifyRequest(endpoint, options = {}) {
  */
 async function getCurrentlyPlaying() {
   try {
-    const response = await makeSpotifyRequest('/me/player/currently-playing');
+    const response = await makeSpotifyRequest('/me/player/currently-playing', {
+      timeout: 10000 // 10 secondes
+    });
     
     if (response.statusCode === 204 || !response.data || !response.data.item) {
       return { isPlaying: false, track: null };
@@ -230,6 +245,10 @@ async function getCurrentlyPlaying() {
       }
     };
   } catch (error) {
+    // Gestion spécifique des erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout') || error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH') {
+      throw new Error('Network error: Unable to connect to Spotify. Please check your internet connection.');
+    }
     if (error.message.includes('401') || error.message.includes('403')) {
       // Token expiré ou invalide
       spotifyAccessToken = null;
@@ -300,6 +319,226 @@ async function skipToPrevious() {
 }
 
 /**
+ * Récupère la liste des appareils disponibles
+ */
+async function getDevices() {
+  try {
+    const response = await makeSpotifyRequest('/me/player/devices', {
+      timeout: 10000 // 10 secondes
+    });
+    
+    if (!response.data || !response.data.devices) {
+      return { devices: [] };
+    }
+
+    return {
+      devices: response.data.devices.map(device => ({
+        id: device.id,
+        name: device.name,
+        type: device.type,
+        isActive: device.is_active,
+        isRestricted: device.is_restricted,
+        volume: device.volume_percent
+      }))
+    };
+  } catch (error) {
+    // Gestion spécifique des erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout') || error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH') {
+      throw new Error('Network error: Unable to connect to Spotify. Please check your internet connection.');
+    }
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Transfère la lecture vers un appareil spécifique
+ */
+async function transferPlayback(deviceId, play = false) {
+  try {
+    await makeSpotifyRequest('/me/player', {
+      method: 'PUT',
+      body: JSON.stringify({
+        device_ids: [deviceId],
+        play: play
+      }),
+      timeout: 15000 // 15 secondes pour le transfert d'appareil
+    });
+    return { success: true };
+  } catch (error) {
+    // Gestion spécifique des erreurs réseau
+    if (error.message.includes('Network error') || error.message.includes('timeout') || error.code === 'ETIMEDOUT' || error.code === 'ENETUNREACH') {
+      throw new Error('Network error: Unable to connect to Spotify. Please check your internet connection.');
+    }
+    if (error.message.includes('404')) {
+      return { success: false, error: 'Device not found or not available' };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Récupère les playlists de l'utilisateur
+ */
+async function getUserPlaylists(limit = 50, offset = 0) {
+  try {
+    const response = await makeSpotifyRequest(`/me/playlists?limit=${limit}&offset=${offset}`);
+    
+    if (!response.data || !response.data.items) {
+      return { playlists: [], total: 0 };
+    }
+
+    return {
+      playlists: response.data.items.map(playlist => ({
+        id: playlist.id,
+        name: playlist.name,
+        description: playlist.description,
+        owner: playlist.owner.display_name,
+        image: playlist.images && playlist.images.length > 0 ? playlist.images[0].url : null,
+        tracksCount: playlist.tracks.total,
+        uri: playlist.uri
+      })),
+      total: response.data.total,
+      limit: response.data.limit,
+      offset: response.data.offset
+    };
+  } catch (error) {
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Récupère les playlists mises en avant par Spotify
+ */
+async function getFeaturedPlaylists(limit = 50, offset = 0) {
+  try {
+    const response = await makeSpotifyRequest(`/browse/featured-playlists?limit=${limit}&offset=${offset}`);
+    
+    if (!response.data || !response.data.playlists || !response.data.playlists.items) {
+      return { playlists: [], total: 0 };
+    }
+
+    return {
+      playlists: response.data.playlists.items.map(playlist => ({
+        id: playlist.id,
+        name: playlist.name,
+        description: playlist.description,
+        owner: playlist.owner.display_name,
+        image: playlist.images && playlist.images.length > 0 ? playlist.images[0].url : null,
+        tracksCount: playlist.tracks.total,
+        uri: playlist.uri
+      })),
+      total: response.data.playlists.total,
+      limit: response.data.playlists.limit,
+      offset: response.data.playlists.offset
+    };
+  } catch (error) {
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Récupère les morceaux d'une playlist
+ */
+async function getPlaylistTracks(playlistId, limit = 100, offset = 0) {
+  try {
+    const response = await makeSpotifyRequest(`/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`);
+    
+    if (!response.data || !response.data.items) {
+      return { tracks: [], total: 0 };
+    }
+
+    return {
+      tracks: response.data.items
+        .filter(item => item.track && item.track.id) // Filtrer les tracks null
+        .map(item => ({
+          id: item.track.id,
+          name: item.track.name,
+          artists: item.track.artists.map(a => a.name).join(', '),
+          album: item.track.album.name,
+          albumArt: item.track.album.images && item.track.album.images.length > 0 
+            ? item.track.album.images[0].url 
+            : null,
+          duration: item.track.duration_ms,
+          uri: item.track.uri
+        })),
+      total: response.data.total,
+      limit: response.data.limit,
+      offset: response.data.offset
+    };
+  } catch (error) {
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Lance une playlist ou un morceau spécifique
+ */
+async function playPlaylist(playlistUri, deviceId = null) {
+  try {
+    const body = {
+      context_uri: playlistUri
+    };
+    
+    if (deviceId) {
+      body.device_id = deviceId;
+    }
+
+    await makeSpotifyRequest('/me/player/play', {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
+    return { success: true };
+  } catch (error) {
+    if (error.message.includes('404')) {
+      return { success: false, error: 'No active device found' };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Lance un morceau spécifique
+ */
+async function playTrack(trackUri, deviceId = null) {
+  try {
+    const body = {
+      uris: [trackUri]
+    };
+    
+    if (deviceId) {
+      body.device_id = deviceId;
+    }
+
+    await makeSpotifyRequest('/me/player/play', {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
+    return { success: true };
+  } catch (error) {
+    if (error.message.includes('404')) {
+      return { success: false, error: 'No active device found' };
+    }
+    throw error;
+  }
+}
+
+/**
  * Vérifie si l'utilisateur est authentifié
  */
 function isAuthenticated() {
@@ -323,6 +562,13 @@ module.exports = {
   resumePlayback,
   skipToNext,
   skipToPrevious,
+  getDevices,
+  transferPlayback,
+  getUserPlaylists,
+  getFeaturedPlaylists,
+  getPlaylistTracks,
+  playPlaylist,
+  playTrack,
   isAuthenticated,
   setTokens
 };
