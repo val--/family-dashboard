@@ -474,54 +474,59 @@ function Hue() {
             />
           </div>
           
-          <div className="hue-scenes-section">
-            <h3 className="hue-scenes-title">Scénarios</h3>
-            {scenesLoading && (
-              <div className="hue-scenes-loading">Chargement des scénarios...</div>
-            )}
-            {scenesError && (
-              <div className="hue-scenes-error">{scenesError}</div>
-            )}
-            {!scenesLoading && !scenesError && scenes.length === 0 && (
-              <div className="hue-scenes-empty">Aucun scénario disponible</div>
-            )}
-            {!scenesLoading && !scenesError && scenes.length > 0 && (
-              <div className="hue-scenes-grid">
-                {scenes.map((scene) => {
-                  const backgroundStyle = scene.colorHexes && scene.colorHexes.length > 1
-                    ? {
-                        background: `linear-gradient(135deg, ${scene.colorHexes.join(', ')})`
-                      }
-                    : {
-                        backgroundColor: scene.hex || '#FFFFFF'
-                      };
-                  
-                  const isActivating = activatingScene === scene.id;
-                  
-                  return (
-                    <button
-                      key={scene.id}
-                      className={`hue-scene-item ${isActivating ? 'hue-scene-activating' : ''}`}
-                      style={backgroundStyle}
-                      onClick={() => handleSceneClick(scene)}
-                      disabled={isActivating}
-                      title={scene.name}
-                    >
-                      {isActivating && (
-                        <span className="hue-scene-loading">⋯</span>
-                      )}
-                      <span className="hue-scene-name">{scene.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <div className="hue-sections-container">
+            <div className="hue-scenes-section">
+              <h3 className="hue-scenes-title">Scénarios</h3>
+              {scenesLoading && (
+                <div className="hue-scenes-loading">Chargement des scénarios...</div>
+              )}
+              {scenesError && (
+                <div className="hue-scenes-error">{scenesError}</div>
+              )}
+              {!scenesLoading && !scenesError && scenes.length === 0 && (
+                <div className="hue-scenes-empty">Aucun scénario disponible</div>
+              )}
+              {!scenesLoading && !scenesError && scenes.length > 0 && (
+                <div className="hue-scenes-grid">
+                  {scenes.map((scene) => {
+                    const backgroundStyle = scene.colorHexes && scene.colorHexes.length > 1
+                      ? {
+                          background: `linear-gradient(135deg, ${scene.colorHexes.join(', ')})`
+                        }
+                      : {
+                          backgroundColor: scene.hex || '#FFFFFF'
+                        };
+                    
+                    const isActivating = activatingScene === scene.id;
+                    
+                    return (
+                      <button
+                        key={scene.id}
+                        className={`hue-scene-item ${isActivating ? 'hue-scene-activating' : ''}`}
+                        onClick={() => handleSceneClick(scene)}
+                        disabled={isActivating}
+                        title={scene.name}
+                      >
+                        <div 
+                          className="hue-scene-circle"
+                          style={backgroundStyle}
+                        >
+                          {isActivating && (
+                            <span className="hue-scene-loading">⋯</span>
+                          )}
+                        </div>
+                        <span className="hue-scene-name">{scene.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-          {lights && lights.length > 0 && (
-            <div className="hue-lights-section">
-              <h3 className="hue-lights-title">Lumières individuelles</h3>
-              <div className="hue-lights-list-page">
+            {lights && lights.length > 0 && (
+              <div className="hue-lights-section">
+                <h3 className="hue-lights-title">Lumières individuelles</h3>
+                <div className="hue-lights-list-page">
                 {lights.map((light) => {
                   // La propriété light.on indique si la lumière est allumée (true = allumée, false = éteinte)
                   const isLightOn = light.on === true;
@@ -590,6 +595,7 @@ function Hue() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
       
