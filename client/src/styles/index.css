@@ -2037,15 +2037,15 @@ body.spotify-page #root {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, transform 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .news-ticker-spotify-toggle:hover:enabled {
@@ -2056,6 +2056,8 @@ body.spotify-page #root {
 .news-ticker-spotify-toggle-icon {
   display: block;
   line-height: 1;
+  width: 14px;
+  height: 14px;
 }
 
 .news-ticker-spotify-toggle:disabled {
@@ -3816,8 +3818,8 @@ body.spotify-page #root {
   transition: all 0.2s ease;
   backdrop-filter: blur(10px);
   color: white;
-  min-width: 60px;
-  min-height: 60px;
+  min-width: 46px;
+  min-height: 46px;
   padding: 0;
   flex-shrink: 0;
 }
@@ -4924,5 +4926,4 @@ body.spotify-page #root {
     font-size: 14px;
   }
 }
-
-
+}

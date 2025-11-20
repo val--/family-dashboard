@@ -282,11 +282,11 @@ function NewsTicker() {
             aria-label={spotifyStatus.isPlaying ? 'Mettre en pause' : 'Lecture'}
           >
             {spotifyStatus.isPlaying ? (
-              <svg className="news-ticker-spotify-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <svg className="news-ticker-spotify-toggle-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                 <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
               </svg>
             ) : (
-              <svg className="news-ticker-spotify-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+              <svg className="news-ticker-spotify-toggle-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             )}
