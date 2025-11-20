@@ -51,7 +51,7 @@ function BusWidget() {
     return (
       <div className="bus-widget">
         <div className="bus-widget-header">
-          <h3 className="bus-widget-title">🚌 Prochains bus</h3>
+          <h3 className="bus-widget-title">Prochains bus</h3>
         </div>
         <div className="bus-widget-content">
           <div className="bus-widget-loading">Chargement...</div>
@@ -64,7 +64,7 @@ function BusWidget() {
     return (
       <div className="bus-widget">
         <div className="bus-widget-header">
-          <h3 className="bus-widget-title">🚌 Prochains bus</h3>
+          <h3 className="bus-widget-title">Prochains bus</h3>
         </div>
         <div className="bus-widget-content">
           <div className="bus-widget-error">{error}</div>
@@ -77,7 +77,7 @@ function BusWidget() {
     return (
       <div className="bus-widget">
         <div className="bus-widget-header">
-          <h3 className="bus-widget-title">🚌 Prochains bus</h3>
+          <h3 className="bus-widget-title">Prochains bus</h3>
         </div>
         <div className="bus-widget-content">
           <div className="bus-widget-empty">
@@ -150,7 +150,7 @@ function BusWidget() {
         style={{ cursor: 'pointer' }}
       >
         <div className="bus-widget-header">
-          <h3 className="bus-widget-title">🚌 Prochains départs à partir de {busData.stopName || 'La Houssais'}</h3>
+          <h3 className="bus-widget-title">Prochains départs à partir de {busData.stopName || 'La Houssais'}</h3>
         </div>
         <div className="bus-widget-content">
           <div className="bus-departures">

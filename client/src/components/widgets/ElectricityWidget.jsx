@@ -18,7 +18,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
     return (
       <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
         <div className="electricity-widget-header">
-          <h2 className="electricity-widget-title">⚡ Consommation Électrique</h2>
+          <h2 className="electricity-widget-title">Consommation Électrique</h2>
         </div>
         <div className="electricity-widget-content">
           <div className="electricity-widget-loading">Chargement...</div>
@@ -31,7 +31,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
     return (
       <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
         <div className="electricity-widget-header">
-          <h2 className="electricity-widget-title">⚡ Consommation Électrique</h2>
+          <h2 className="electricity-widget-title">Consommation Électrique</h2>
         </div>
         <div className="electricity-widget-content">
           <div className="electricity-widget-error">{error}</div>
@@ -44,7 +44,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
     return (
       <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
         <div className="electricity-widget-header">
-          <h2 className="electricity-widget-title">⚡ Consommation Électrique</h2>
+          <h2 className="electricity-widget-title">Consommation Électrique</h2>
         </div>
         <div className="electricity-widget-content">
           <div className="electricity-widget-empty">Aucune donnée disponible</div>
@@ -70,7 +70,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
     return (
       <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
         <div className="electricity-widget-header">
-          <h2 className="electricity-widget-title">⚡ Consommation Électrique</h2>
+          <h2 className="electricity-widget-title">Consommation Électrique</h2>
         </div>
         <div className="electricity-widget-content">
           {chartData.length > 0 ? (

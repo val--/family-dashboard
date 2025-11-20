@@ -122,7 +122,6 @@ function NewsTicker() {
     return (
       <div className="news-ticker">
         <div className="news-ticker-label">
-          <span className="news-ticker-label-icon">📰</span>
           <span>{getNewsTypeLabel()}</span>
         </div>
         <div className="news-ticker-content">
@@ -136,7 +135,6 @@ function NewsTicker() {
     return (
       <div className="news-ticker">
         <div className="news-ticker-label">
-          <span className="news-ticker-label-icon">📰</span>
           <span>{getNewsTypeLabel()}</span>
         </div>
         <div className="news-ticker-content">
@@ -150,7 +148,6 @@ function NewsTicker() {
     return (
       <div className="news-ticker">
         <div className="news-ticker-label">
-          <span className="news-ticker-label-icon">📰</span>
           <span>{getNewsTypeLabel()}</span>
         </div>
         <div className="news-ticker-content">
@@ -373,7 +370,6 @@ function NewsTicker() {
           }}
           style={{ cursor: 'pointer' }}
         >
-          <span className="news-ticker-label-icon">📰</span>
           <span>{getNewsTypeLabel()}</span>
           {showNewsTypeMenu && (
             <div 
@@ -391,7 +387,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('news', e);
                 }}
               >
-                📰 Actualités
+                Actualités
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'tech' ? 'active' : ''}`}
@@ -402,7 +398,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('tech', e);
                 }}
               >
-                💻 Tech
+                Tech
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'crime' ? 'active' : ''}`}
@@ -413,7 +409,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('crime', e);
                 }}
               >
-                🚨 Crime
+                Crime
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'entertainment' ? 'active' : ''}`}
@@ -424,7 +420,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('entertainment', e);
                 }}
               >
-                🎬 Divertissement
+                Divertissement
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'lifestyle' ? 'active' : ''}`}
@@ -435,7 +431,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('lifestyle', e);
                 }}
               >
-                🌸 Mode de vie
+                Mode de vie
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'world' ? 'active' : ''}`}
@@ -446,7 +442,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('world', e);
                 }}
               >
-                🌍 Monde
+                Monde
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'domestic' ? 'active' : ''}`}
@@ -457,7 +453,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('domestic', e);
                 }}
               >
-                🏠 National
+                National
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'education' ? 'active' : ''}`}
@@ -468,7 +464,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('education', e);
                 }}
               >
-                📚 Éducation
+                Éducation
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'environment' ? 'active' : ''}`}
@@ -479,7 +475,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('environment', e);
                 }}
               >
-                🌱 Environnement
+                Environnement
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'health' ? 'active' : ''}`}
@@ -490,7 +486,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('health', e);
                 }}
               >
-                🏥 Santé
+                Santé
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'politics' ? 'active' : ''}`}
@@ -501,7 +497,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('politics', e);
                 }}
               >
-                🏛️ Politique
+                Politique
               </div>
               <div 
                 className={`news-ticker-type-option ${newsType === 'tourism' ? 'active' : ''}`}
@@ -512,7 +508,7 @@ function NewsTicker() {
                   handleNewsTypeSelect('tourism', e);
                 }}
               >
-                ✈️ Tourisme
+                Tourisme
               </div>
             </div>
           )}

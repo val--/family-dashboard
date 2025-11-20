@@ -11,7 +11,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f5f5;
+  background: #ffffff;
   overflow: hidden;
   height: 100vh;
   width: 100vw;
@@ -46,7 +46,7 @@ body {
   width: 100vw;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(to bottom, #f0f4f8 0%, #e8f0f5 100%);
+  background: #ffffff;
   color: #212529;
   overflow-y: auto;
   overflow-x: hidden;
@@ -81,7 +81,7 @@ body {
   display: flex;
   flex: 1;
   width: 100vw;
-  background: linear-gradient(to bottom, #f0f4f8 0%, #e8f0f5 100%);
+  background: #ffffff;
   overflow: hidden;
   min-height: 0;
   padding-bottom: 40px; /* Space for news ticker */
@@ -157,8 +157,7 @@ body {
 .electricity-widget {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   height: 100%;
   width: 100%;
   display: flex;
@@ -167,21 +166,26 @@ body {
 }
 
 .electricity-widget:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  background: #fafafa;
+  box-shadow: none;
+  transform: none;
 }
 
 .electricity-widget-header {
   padding: 10px 12px;
-  border-bottom: 2px solid #f39c12;
+  border-bottom: 1px solid #e5e7eb;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.electricity-widget-header::before {
+.electricity-widget-header::after {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -2px;
+  bottom: -1px;
   width: 40px;
   height: 2px;
   background: linear-gradient(to right, #f39c12, #e67e22);
@@ -225,33 +229,20 @@ body {
 }
 
 .electricity-stat-card {
-  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+  background: #ffffff;
   border-radius: 6px;
   padding: 10px 12px;
-  border-left: 3px solid #f39c12;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  box-shadow: none;
+  transition: background 0.2s ease;
 }
 
 .electricity-stat-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transform: translateX(2px);
-}
-
-.electricity-stat-today {
-  border-left-color: #3498db;
-}
-
-.electricity-stat-week {
-  border-left-color: #2ecc71;
-}
-
-.electricity-stat-power {
-  border-left-color: #9b59b6;
+  background: #fafafa;
+  box-shadow: none;
+  transform: none;
 }
 
 .electricity-stat-chart {
-  border-left-color: #1abc9c;
   padding-bottom: 20px;
 }
 
@@ -449,9 +440,8 @@ body {
 .calendar-widget {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   height: 100%;
   width: 100%;
   display: flex;
@@ -462,13 +452,14 @@ body {
 }
 
 .calendar-widget:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  background: #fafafa;
+  box-shadow: none;
+  transform: none;
 }
 
 .calendar-widget-header {
   padding: 10px 12px;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 1px solid #e5e7eb;
   position: relative;
   display: flex;
   align-items: center;
@@ -476,11 +467,11 @@ body {
   gap: 8px;
 }
 
-.calendar-widget-header::before {
+.calendar-widget-header::after {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -2px;
+  bottom: -1px;
   width: 40px;
   height: 2px;
   background: linear-gradient(to right, #3498db, #2980b9);
@@ -497,6 +488,7 @@ body {
 }
 
 .calendar-widget-refresh {
+  display: none !important;
   background: rgba(52, 152, 219, 0.05);
   border: 1px solid rgba(52, 152, 219, 0.15);
   cursor: pointer;
@@ -1412,12 +1404,13 @@ body {
 
 .hue-widget-clickable {
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease;
 }
 
 .hue-widget-clickable:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: none;
+  box-shadow: none;
+  background: #fafafa;
 }
 
 .weather-bar {
@@ -1953,15 +1946,11 @@ body {
   border-right: 2px solid rgba(255, 255, 255, 0.1);
   position: relative;
   transition: background 0.2s;
+  color: inherit;
 }
 
 .news-ticker-label:hover {
   background: rgba(255, 255, 255, 0.2);
-}
-
-.news-ticker-label-icon {
-  margin-right: 6px;
-  font-size: 14px;
 }
 
 .news-ticker-content {
@@ -2117,8 +2106,7 @@ body {
 .bus-widget {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   height: 100%;
   width: 100%;
   display: flex;
@@ -2129,21 +2117,26 @@ body {
 }
 
 .bus-widget:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  background: #fafafa;
+  box-shadow: none;
+  transform: none;
 }
 
 .bus-widget-header {
   padding: 10px 12px;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 1px solid #e5e7eb;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.bus-widget-header::before {
+.bus-widget-header::after {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -2px;
+  bottom: -1px;
   width: 40px;
   height: 2px;
   background: linear-gradient(to right, #3498db, #2980b9);
@@ -2185,8 +2178,7 @@ body {
 .hue-widget {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   height: 100%;
   width: 100%;
   display: flex;
@@ -2195,24 +2187,26 @@ body {
 }
 
 .hue-widget:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  background: #fafafa;
+  box-shadow: none;
+  transform: none;
 }
 
 .hue-widget-header {
-  padding: 6px 10px;
-  border-bottom: 2px solid var(--hue-color, #ffd700);
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
   position: relative;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.hue-widget-header::before {
+.hue-widget-header::after {
   content: '';
   position: absolute;
   left: 0;
-  bottom: -2px;
+  bottom: -1px;
   width: 40px;
   height: 2px;
   background: var(--hue-color, #ffd700);
@@ -2220,7 +2214,7 @@ body {
 }
 
 .hue-widget-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #2c3e50;
   margin: 0;
@@ -2263,7 +2257,7 @@ body {
 .hue-status {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .hue-status-main {
@@ -2353,8 +2347,8 @@ body {
 
 /* Brightness control slider */
 .hue-brightness-control {
-  margin-top: 4px;
-  padding-top: 6px;
+  margin-top: 2px;
+  padding-top: 4px;
   border-top: 1px solid #e9ecef;
 }
 
@@ -2364,7 +2358,7 @@ body {
   align-items: center;
   font-size: 9px;
   color: #6c757d;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .hue-brightness-value {
@@ -2723,8 +2717,8 @@ body {
 
 .hue-toggle-button {
   width: 100%;
-  padding: 8px 12px;
-  margin-top: 6px;
+  padding: 8px 10px;
+  margin-top: 4px;
   background: var(--hue-color, #ffd700);
   color: #2c3e50;
   border: none;
@@ -3163,11 +3157,6 @@ body {
   .news-ticker-label {
     padding: 0 12px;
     font-size: 12px;
-  }
-
-  .news-ticker-label-icon {
-    font-size: 14px;
-    margin-right: 6px;
   }
 
   .news-ticker-content {
