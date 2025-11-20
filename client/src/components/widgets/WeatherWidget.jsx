@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { REFRESH_INTERVAL } from '../../constants';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useScreensaverContext } from '../../App';
 
 function WeatherWidget() {
   const [weatherData, setWeatherData] = useState(null);
@@ -10,6 +11,7 @@ function WeatherWidget() {
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
+  const screensaverContext = useScreensaverContext();
 
   const fetchWeather = async () => {
     try {
@@ -49,10 +51,22 @@ function WeatherWidget() {
     return () => clearInterval(timeInterval);
   }, []);
 
+  const handleTimeClick = (e) => {
+    e.stopPropagation();
+    if (screensaverContext?.activateScreensaver) {
+      screensaverContext.activateScreensaver();
+    }
+  };
+
   const renderDateTime = () => {
     return (
       <div className="weather-datetime">
-        <div className="weather-time">
+        <div 
+          className="weather-time" 
+          onClick={handleTimeClick}
+          style={{ cursor: 'pointer' }}
+          title="Cliquer pour activer le mode veille"
+        >
           {format(currentTime, 'HH:mm:ss')}
         </div>
       </div>
@@ -137,7 +151,7 @@ function WeatherWidget() {
         
         <div className="weather-forecast">
           {weatherData.forecast && weatherData.forecast.length > 0 ? (
-            weatherData.forecast.map((day, index) => (
+            weatherData.forecast.slice(0, 2).map((day, index) => (
               <div key={index} className="weather-forecast-item">
                 <div className="weather-forecast-day">{formatDate(day.date)}</div>
                 <img 

@@ -89,9 +89,20 @@ export function useScreensaver(idleTime = 5000) {
     };
   }, [idleTime, resetTimer, isScreensaverActive]);
 
+  const activateScreensaver = useCallback(() => {
+    // Activer immédiatement l'écran de veille
+    setIsScreensaverActive(true);
+    // Arrêter le timer actuel
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
   return {
     isScreensaverActive,
     registerActivity: exitScreensaver,
+    activateScreensaver,
   };
 }
 

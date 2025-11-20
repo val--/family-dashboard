@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
@@ -10,6 +10,14 @@ import Screensaver from './components/common/Screensaver';
 import { useScreensaver } from './hooks/useScreensaver';
 
 import { API_URL, REFRESH_INTERVAL, SCREENSAVER_IDLE_TIME } from './constants';
+
+// Contexte pour partager la fonction d'activation du screensaver
+const ScreensaverContext = createContext(null);
+
+export const useScreensaverContext = () => {
+  const context = useContext(ScreensaverContext);
+  return context;
+};
 
 function CalendarPage() {
   const [events, setEvents] = useState([]);
@@ -409,12 +417,12 @@ function AppContent() {
   // Activer l'écran de veille après le délai d'inactivité configuré
   // Ne pas activer le screensaver sur la page Spotify
   const shouldDisableScreensaver = location.pathname === '/spotify';
-  const { isScreensaverActive, registerActivity } = useScreensaver(
+  const { isScreensaverActive, registerActivity, activateScreensaver } = useScreensaver(
     shouldDisableScreensaver ? null : SCREENSAVER_IDLE_TIME
   );
 
   return (
-    <>
+    <ScreensaverContext.Provider value={{ activateScreensaver }}>
       {isScreensaverActive && <Screensaver onExit={registerActivity} />}
       <Routes>
         <Route path="/" element={<DashboardPages />} />
@@ -424,7 +432,7 @@ function AppContent() {
         <Route path="/hue" element={<HuePage />} />
         <Route path="/spotify" element={<SpotifyPage />} />
       </Routes>
-    </>
+    </ScreensaverContext.Provider>
   );
 }
 
