@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
 import Electricity from './components/pages/Electricity';
@@ -404,12 +404,17 @@ function SpotifyPage() {
   );
 }
 
-function App() {
+function AppContent() {
+  const location = useLocation();
   // Activer l'écran de veille après le délai d'inactivité configuré
-  const { isScreensaverActive, registerActivity } = useScreensaver(SCREENSAVER_IDLE_TIME);
+  // Ne pas activer le screensaver sur la page Spotify
+  const shouldDisableScreensaver = location.pathname === '/spotify';
+  const { isScreensaverActive, registerActivity } = useScreensaver(
+    shouldDisableScreensaver ? null : SCREENSAVER_IDLE_TIME
+  );
 
   return (
-    <Router>
+    <>
       {isScreensaverActive && <Screensaver onExit={registerActivity} />}
       <Routes>
         <Route path="/" element={<DashboardPages />} />
@@ -419,6 +424,14 @@ function App() {
         <Route path="/hue" element={<HuePage />} />
         <Route path="/spotify" element={<SpotifyPage />} />
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

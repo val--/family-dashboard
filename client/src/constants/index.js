@@ -8,7 +8,7 @@ export const BUS_REFRESH_INTERVAL = 1 * 60 * 1000; // 1 minute for bus (more fre
 export const HUE_REFRESH_INTERVAL = 3 * 1000; // 3 seconds for Hue lights (real-time updates)
 
 // Screensaver configuration
-export const SCREENSAVER_IDLE_TIME = 30 * 1000; // 30 seconds
+export const SCREENSAVER_IDLE_TIME = 60 * 1000; // 1 minute
 
 // Maximum number of events to display
 export const MAX_EVENTS_WIDGET = 10; // Maximum events in the widget

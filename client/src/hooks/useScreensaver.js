@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * Hook personnalisé pour gérer l'écran de veille
- * @param {number} idleTime - Temps d'inactivité en millisecondes avant d'activer l'écran de veille (défaut: 5000ms)
+ * @param {number|null} idleTime - Temps d'inactivité en millisecondes avant d'activer l'écran de veille (défaut: 5000ms). Si null, le screensaver est désactivé.
  * @returns {boolean} - true si l'écran de veille doit être affiché, false sinon
  */
 export function useScreensaver(idleTime = 5000) {
@@ -19,6 +19,11 @@ export function useScreensaver(idleTime = 5000) {
     // Réinitialiser le timer
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+    }
+
+    // Si idleTime est null, ne pas activer le screensaver
+    if (idleTime === null) {
+      return;
     }
 
     // Programmer l'activation de l'écran de veille
@@ -39,6 +44,16 @@ export function useScreensaver(idleTime = 5000) {
   }, [resetTimer]);
 
   useEffect(() => {
+    // Si idleTime est null, désactiver complètement le screensaver
+    if (idleTime === null) {
+      setIsScreensaverActive(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      return;
+    }
+
     // Ne rien écouter lorsque l'écran de veille est actif
     if (isScreensaverActive) {
       return;

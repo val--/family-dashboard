@@ -96,7 +96,6 @@ function BusWidget() {
         </div>
         <div className="bus-widget-content">
           <div className="bus-widget-empty">
-            <p>Aucun arrêt configuré</p>
             <p>Aucun départ prévu</p>
           </div>
         </div>

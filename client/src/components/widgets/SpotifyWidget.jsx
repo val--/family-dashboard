@@ -705,7 +705,7 @@ function SpotifyWidget() {
                 className="spotify-widget-control-button spotify-widget-previous"
                 aria-label="Morceau précédent"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                 </svg>
               </button>
@@ -729,7 +729,7 @@ function SpotifyWidget() {
                 className="spotify-widget-control-button spotify-widget-next"
                 aria-label="Morceau suivant"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
                 </svg>
               </button>
