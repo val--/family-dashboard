@@ -381,6 +381,11 @@ function HuePage() {
 }
 
 function SpotifyPage() {
+  const navigate = useNavigate();
+  const containerRef = useRef(null);
+  const startXRef = useRef(0);
+  const isDraggingRef = useRef(false);
+
   useEffect(() => {
     document.body.classList.add('spotify-page');
     return () => {
@@ -388,8 +393,105 @@ function SpotifyPage() {
     };
   }, []);
 
+  // Gestion du swipe vers la gauche pour revenir à la page d'accueil
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let startTarget = null;
+
+    const handleTouchStart = (e) => {
+      startTarget = e.target;
+      startXRef.current = e.touches[0].clientX;
+      isDraggingRef.current = true;
+    };
+
+    const handleTouchMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const currentX = e.touches[0].clientX;
+      const deltaX = currentX - startXRef.current;
+      
+      // Empêcher le scroll vertical si on swipe horizontalement
+      if (Math.abs(deltaX) > 10) {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      
+      const currentX = e.changedTouches[0].clientX;
+      const deltaX = currentX - startXRef.current;
+      const threshold = window.innerWidth * 0.2; // 20% de la largeur pour déclencher le changement
+      
+      // Ne pas naviguer si on a cliqué sur un élément interactif
+      const endTarget = e.changedTouches[0].target;
+      const isInteractive = endTarget.closest('button, a, input, .spotify-widget-volume-slider, .spotify-widget-playlists-button, .spotify-widget-control-button');
+      
+      // Swipe vers la droite (deltaX positif) pour revenir à la page d'accueil
+      if (deltaX > threshold && !isInteractive) {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate('/');
+      }
+      
+      startTarget = null;
+    };
+
+    // Gestion du swipe à la souris (pour développement/desktop)
+    const handleMouseDown = (e) => {
+      // Ne pas intercepter les clics sur les boutons/interactifs
+      if (e.target.closest('button, a, input, .spotify-widget-volume-slider, .spotify-widget-playlists-button')) return;
+      startTarget = e.target;
+      startXRef.current = e.clientX;
+      isDraggingRef.current = true;
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+    };
+
+    const handleMouseUp = (e) => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      
+      const currentX = e.clientX;
+      const deltaX = currentX - startXRef.current;
+      const threshold = window.innerWidth * 0.2;
+      
+      // Ne pas naviguer si on a cliqué sur un élément interactif
+      const isInteractive = e.target.closest('button, a, input, .spotify-widget-volume-slider, .spotify-widget-playlists-button, .spotify-widget-control-button');
+      
+      // Swipe vers la droite pour revenir à la page d'accueil
+      if (deltaX > threshold && !isInteractive) {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate('/');
+      }
+      
+      startTarget = null;
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: false });
+    container.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [navigate]);
+
   return (
-    <div className="app app-spotify">
+    <div className="app app-spotify" ref={containerRef}>
       <HomePage2 />
     </div>
   );

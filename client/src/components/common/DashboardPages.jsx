@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Home from '../pages/Home';
-import HomePage2 from '../pages/HomePage2';
 
 /**
  * Composant pour gérer la navigation horizontale entre les pages du dashboard
  * Permet de swiper entre la page 1 et la page 2
  */
 function DashboardPages() {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const containerRef = useRef(null);
@@ -52,7 +53,8 @@ function DashboardPages() {
       if (deltaX > 0 && currentPage > 0) {
         setCurrentPage(currentPage - 1);
       } else if (deltaX < 0 && currentPage < 1) {
-        setCurrentPage(currentPage + 1);
+        // Naviguer vers /spotify au lieu d'afficher HomePage2 directement
+        navigate('/spotify');
       } else {
         // Retour à la position actuelle
         if (containerRef.current) {
@@ -101,7 +103,8 @@ function DashboardPages() {
       if (deltaX > 0 && currentPage > 0) {
         setCurrentPage(currentPage - 1);
       } else if (deltaX < 0 && currentPage < 1) {
-        setCurrentPage(currentPage + 1);
+        // Naviguer vers /spotify au lieu d'afficher HomePage2 directement
+        navigate('/spotify');
       } else {
         if (containerRef.current) {
           containerRef.current.style.transform = `translateX(-${currentPage * 100}%)`;
@@ -150,9 +153,6 @@ function DashboardPages() {
       <div className="dashboard-pages-container" ref={containerRef}>
         <div className="dashboard-page">
           <Home />
-        </div>
-        <div className="dashboard-page">
-          <HomePage2 />
         </div>
       </div>
     </div>

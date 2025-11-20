@@ -9,7 +9,6 @@ function WeatherWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
   const navigate = useNavigate();
 
   const fetchWeather = async () => {
@@ -50,26 +49,9 @@ function WeatherWidget() {
     return () => clearInterval(timeInterval);
   }, []);
 
-  // Detect screen size for date formatting
-  useEffect(() => {
-    const handleResize = () => {
-      setIsSmallScreen(window.innerWidth < 1024);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const renderDateTime = () => {
-    const dateFormat = isSmallScreen 
-      ? format(currentTime, 'EEE d MMM yyyy', { locale: fr }) // Abrégé: "Sam 16 Nov 2025"
-      : format(currentTime, 'EEEE d MMMM yyyy', { locale: fr }); // Complet: "Samedi 16 Novembre 2025"
-    
     return (
       <div className="weather-datetime">
-        <div className="weather-date">
-          {dateFormat}
-        </div>
         <div className="weather-time">
           {format(currentTime, 'HH:mm:ss')}
         </div>

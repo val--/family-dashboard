@@ -25,6 +25,7 @@ function NewsTicker() {
     lastTrack: null,
     error: null,
   });
+  const [hasActiveDevice, setHasActiveDevice] = useState(false);
   const [isSpotifyActionPending, setIsSpotifyActionPending] = useState(false);
   const navigate = useNavigate();
 
@@ -125,6 +126,25 @@ function NewsTicker() {
         lastTrack: data.lastPlayedTrack || null,
         error: null,
       });
+
+      // Vérifier s'il y a un device actif
+      if (data.authenticated) {
+        try {
+          const devicesResponse = await fetch('/api/spotify/devices');
+          const devicesData = await devicesResponse.json();
+          if (devicesData.success && devicesData.devices) {
+            const activeDevice = devicesData.devices.find(d => d.isActive);
+            setHasActiveDevice(!!activeDevice);
+          } else {
+            setHasActiveDevice(false);
+          }
+        } catch (err) {
+          console.error('Error fetching devices:', err);
+          setHasActiveDevice(false);
+        }
+      } else {
+        setHasActiveDevice(false);
+      }
     } catch (err) {
       setSpotifyStatus((prev) => ({
         ...prev,
@@ -134,6 +154,7 @@ function NewsTicker() {
         track: null,
         error: err.message,
       }));
+      setHasActiveDevice(false);
     }
   }, []);
 
@@ -257,7 +278,7 @@ function NewsTicker() {
             className="news-ticker-spotify-toggle"
             onClick={handleSpotifyTogglePlayback}
             onTouchEnd={stopPropagationTouch(handleSpotifyTogglePlayback)}
-            disabled={isSpotifyActionPending}
+            disabled={isSpotifyActionPending || !hasActiveDevice}
             aria-label={spotifyStatus.isPlaying ? 'Mettre en pause' : 'Lecture'}
           >
             {spotifyStatus.isPlaying ? (
