@@ -4,7 +4,6 @@ import ElectricityWidget from '../widgets/ElectricityWidget';
 import WeatherWidget from '../widgets/WeatherWidget';
 import NewsTicker from '../widgets/NewsTicker';
 import BusWidget from '../widgets/BusWidget';
-import HueWidget from '../widgets/HueWidget';
 import { API_URL, REFRESH_INTERVAL, MAX_EVENTS_WIDGET } from '../../constants';
 
 function Home() {
@@ -86,9 +85,6 @@ function Home() {
               error={error}
               onRefresh={fetchEvents}
             />
-          </div>
-          <div className="home-left-bottom">
-            <HueWidget />
           </div>
         </div>
         <div className="home-right">

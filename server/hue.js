@@ -519,6 +519,41 @@ async function toggleLight(lightId, turnOn = null) {
   }
 }
 
+async function setLightBrightness(lightId, brightness) {
+  try {
+    if (!HUE_APP_KEY) {
+      throw new Error('HUE_APP_KEY not configured');
+    }
+
+    if (!lightId) {
+      throw new Error('Light ID is required');
+    }
+
+    const brightnessValue = Math.max(0, Math.min(100, Math.round(brightness)));
+
+    const updateUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+    await makeRequest(updateUrl, {
+      method: 'PUT',
+      body: {
+        on: {
+          on: brightnessValue > 0
+        },
+        dimming: {
+          brightness: brightnessValue
+        }
+      }
+    });
+
+    hueCache = null;
+    cacheTimestamp = null;
+
+    return { success: true, lightId, brightness: brightnessValue };
+  } catch (error) {
+    console.error('[Hue] ❌ Erreur lors du réglage de la luminosité d\'une lumière:', error.message);
+    throw error;
+  }
+}
+
 async function setRoomBrightness(roomName = 'Salon', brightness) {
   try {
     if (!HUE_APP_KEY) {
@@ -544,13 +579,20 @@ async function setRoomBrightness(roomName = 'Salon', brightness) {
       throw new Error(`No grouped_light service found for room "${roomName}"`);
     }
 
+    // Récupérer l'état actuel pour ne pas modifier l'état on/off
+    const groupedLightUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/grouped_light/${groupedLightService.rid}`;
+    const groupedLightResponse = await makeRequest(groupedLightUrl);
+    const groupedLight = groupedLightResponse.data?.[0];
+
+    if (!groupedLight) {
+      throw new Error(`Grouped light ${groupedLightService.rid} not found`);
+    }
+
+    // Ne modifier que la luminosité, sans toucher à l'état on/off
     const updateUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/grouped_light/${groupedLightService.rid}`;
     await makeRequest(updateUrl, {
       method: 'PUT',
       body: {
-        on: {
-          on: brightnessValue > 0
-        },
         dimming: {
           brightness: brightnessValue
         }
@@ -765,10 +807,46 @@ async function activateScene(sceneId) {
   }
 }
 
+async function setLightBrightness(lightId, brightness) {
+  try {
+    if (!HUE_APP_KEY) {
+      throw new Error('HUE_APP_KEY not configured');
+    }
+
+    if (!lightId) {
+      throw new Error('Light ID is required');
+    }
+
+    const brightnessValue = Math.max(0, Math.min(100, Math.round(brightness)));
+
+    const updateUrl = `https://${HUE_BRIDGE_IP}/clip/v2/resource/light/${lightId}`;
+    await makeRequest(updateUrl, {
+      method: 'PUT',
+      body: {
+        on: {
+          on: brightnessValue > 0
+        },
+        dimming: {
+          brightness: brightnessValue
+        }
+      }
+    });
+
+    hueCache = null;
+    cacheTimestamp = null;
+
+    return { success: true, lightId, brightness: brightnessValue };
+  } catch (error) {
+    console.error('[Hue] ❌ Erreur lors du réglage de la luminosité d\'une lumière:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   getRoomStatus,
   toggleRoomLights,
   toggleLight,
+  setLightBrightness,
   setRoomBrightness,
   setRoomColor,
   getRoomScenes,

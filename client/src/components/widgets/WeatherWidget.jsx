@@ -4,6 +4,7 @@ import { REFRESH_INTERVAL } from '../../constants';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useScreensaverContext } from '../../App';
+import HueCompactWidget from './HueCompactWidget';
 
 function WeatherWidget() {
   const [weatherData, setWeatherData] = useState(null);
@@ -61,10 +62,13 @@ function WeatherWidget() {
   if (loading && !weatherData) {
     return (
       <div className="weather-bar">
+        <div className="weather-loading">Chargement météo...</div>
         <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
           {format(currentTime, 'HH:mm')}
         </div>
-        <div className="weather-loading">Chargement météo...</div>
+        <div className="weather-spacer">
+          <HueCompactWidget />
+        </div>
       </div>
     );
   }
@@ -72,10 +76,13 @@ function WeatherWidget() {
   if (error && !weatherData) {
     return (
       <div className="weather-bar">
+        <div className="weather-error">Météo indisponible ({error})</div>
         <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
           {format(currentTime, 'HH:mm')}
         </div>
-        <div className="weather-error">Météo indisponible ({error})</div>
+        <div className="weather-spacer">
+          <HueCompactWidget />
+        </div>
       </div>
     );
   }
@@ -83,10 +90,13 @@ function WeatherWidget() {
   if (!weatherData) {
     return (
       <div className="weather-bar">
+        <div className="weather-error">Météo indisponible</div>
         <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
           {format(currentTime, 'HH:mm')}
         </div>
-        <div className="weather-error">Météo indisponible</div>
+        <div className="weather-spacer">
+          <HueCompactWidget />
+        </div>
       </div>
     );
   }
@@ -109,9 +119,6 @@ function WeatherWidget() {
 
   return (
     <div className="weather-bar weather-bar-clickable" onClick={() => navigate('/weather')}>
-      <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
-        {format(currentTime, 'HH:mm')}
-      </div>
       <div className="weather-content-integrated">
         <div className="weather-current">
           <div className="weather-location">
@@ -144,7 +151,7 @@ function WeatherWidget() {
         
         <div className="weather-forecast">
           {weatherData.forecast && weatherData.forecast.length > 0 ? (
-            weatherData.forecast.slice(0, 2).map((day, index) => (
+            weatherData.forecast.slice(0, 3).map((day, index) => (
               <div key={index} className="weather-forecast-item">
                 <div className="weather-forecast-day">{formatDate(day.date)}</div>
                 <img 
@@ -165,6 +172,12 @@ function WeatherWidget() {
             <div className="weather-forecast-empty">Aucune prévision</div>
           )}
         </div>
+      </div>
+      <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
+        {format(currentTime, 'HH:mm')}
+      </div>
+      <div className="weather-spacer">
+        <HueCompactWidget />
       </div>
     </div>
   );

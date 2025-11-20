@@ -175,6 +175,36 @@ app.post('/api/hue/light/toggle', async (req, res) => {
   }
 });
 
+app.post('/api/hue/light/brightness', async (req, res) => {
+  try {
+    const { lightId, brightness } = req.body || {};
+
+    if (!lightId) {
+      return res.status(400).json({
+        error: 'Light ID is required',
+        success: false
+      });
+    }
+
+    if (brightness === undefined || brightness === null) {
+      return res.status(400).json({
+        error: 'Brightness value is required',
+        success: false
+      });
+    }
+
+    const result = await hueService.setLightBrightness(lightId, brightness);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error in /api/hue/light/brightness:', error);
+    res.status(500).json({
+      error: 'Failed to set Hue light brightness',
+      message: error.message,
+      success: false
+    });
+  }
+});
+
 app.post('/api/hue/room/brightness', async (req, res) => {
   try {
     const config = require('./config');
