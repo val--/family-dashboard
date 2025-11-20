@@ -1507,33 +1507,26 @@ body.spotify-page #root {
   opacity: 0.9;
 }
 
-.weather-datetime {
+.weather-time-integrated {
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  justify-content: center;
   flex: 0 0 auto;
-  margin-right: 20px;
-  white-space: nowrap;
-}
-
-.weather-time {
-  font-size: 32px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 1px;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  margin-right: 16px;
   line-height: 1;
+  opacity: 0.95;
+  transition: opacity 0.2s ease;
 }
 
-.weather-time-icon {
-  font-size: 14px;
-  opacity: 0.9;
+.weather-time-integrated:hover {
+  opacity: 1;
 }
 
-.weather-content-right {
+.weather-content-integrated {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1655,35 +1648,17 @@ body.spotify-page #root {
     flex-wrap: wrap;
   }
 
-  .weather-content-right {
+  .weather-time-integrated {
+    font-size: 20px;
+    margin-right: 12px;
+  }
+
+  .weather-content-integrated {
     flex: 1 1 100%;
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
     justify-content: flex-start;
-  }
-
-  .weather-datetime {
-    flex: 1 1 100%;
-    margin-bottom: 8px;
-    margin-right: 0;
-  }
-
-  .weather-date {
-    font-size: 14px;
-  }
-
-  .weather-time {
-    font-size: 16px;
-  }
-  
-  .weather-datetime {
-    margin-right: 16px;
-  }
-  
-  .weather-content-right {
-    gap: 12px;
-    min-width: 0;
   }
   
   .weather-forecast {

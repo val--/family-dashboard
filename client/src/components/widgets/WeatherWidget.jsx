@@ -58,25 +58,12 @@ function WeatherWidget() {
     }
   };
 
-  const renderDateTime = () => {
-    return (
-      <div className="weather-datetime">
-        <div 
-          className="weather-time" 
-          onClick={handleTimeClick}
-          style={{ cursor: 'pointer' }}
-          title="Cliquer pour activer le mode veille"
-        >
-          {format(currentTime, 'HH:mm:ss')}
-        </div>
-      </div>
-    );
-  };
-
   if (loading && !weatherData) {
     return (
       <div className="weather-bar">
-        {renderDateTime()}
+        <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
+          {format(currentTime, 'HH:mm')}
+        </div>
         <div className="weather-loading">Chargement météo...</div>
       </div>
     );
@@ -85,7 +72,9 @@ function WeatherWidget() {
   if (error && !weatherData) {
     return (
       <div className="weather-bar">
-        {renderDateTime()}
+        <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
+          {format(currentTime, 'HH:mm')}
+        </div>
         <div className="weather-error">Météo indisponible ({error})</div>
       </div>
     );
@@ -94,7 +83,9 @@ function WeatherWidget() {
   if (!weatherData) {
     return (
       <div className="weather-bar">
-        {renderDateTime()}
+        <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
+          {format(currentTime, 'HH:mm')}
+        </div>
         <div className="weather-error">Météo indisponible</div>
       </div>
     );
@@ -118,8 +109,10 @@ function WeatherWidget() {
 
   return (
     <div className="weather-bar weather-bar-clickable" onClick={() => navigate('/weather')}>
-      {renderDateTime()}
-      <div className="weather-content-right">
+      <div className="weather-time-integrated" onClick={handleTimeClick} style={{ cursor: 'pointer' }} title="Cliquer pour activer le mode veille">
+        {format(currentTime, 'HH:mm')}
+      </div>
+      <div className="weather-content-integrated">
         <div className="weather-current">
           <div className="weather-location">
             {weatherData.city}
