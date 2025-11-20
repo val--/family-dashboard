@@ -2966,6 +2966,37 @@ body.spotify-page #root {
   gap: 6px;
 }
 
+.bus-departures-two-columns {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.bus-departures-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0; /* Permet au contenu de se rétrécir si nécessaire */
+}
+
+.bus-departures-column-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding-right: 12px;
+}
+
+.bus-departures-column-right {
+  padding-left: 12px;
+}
+
+.bus-departures-empty {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+}
+
 .bus-line-group {
   display: flex;
   flex-direction: column;
@@ -3004,6 +3035,13 @@ body.spotify-page #root {
 .bus-line-number.bus-line-30 {
   background: #ffd700;
   color: #2c3e50;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bus-line-number.bus-line-c4 {
+  background: #32CD32;
+  color: #ffffff;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -3202,6 +3240,23 @@ body.spotify-page #root {
   margin: 0 0 16px 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.bus-modal-stop-section {
+  margin-bottom: 32px;
+}
+
+.bus-modal-stop-section:last-child {
+  margin-bottom: 0;
+}
+
+.bus-modal-stop-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e9ecef;
 }
 
 .bus-modal-direction-group {

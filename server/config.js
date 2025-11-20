@@ -25,8 +25,13 @@ module.exports = {
     pageSize: parseInt(process.env.NEWS_PAGE_SIZE || '20', 10)
   },
   bus: {
-    stopId: process.env.BUS_STOP_ID || 'LHOU', // Code de l'arrêt (ex: LHOU pour "La Houssais" à Rezé)
-    stopName: process.env.BUS_STOP_NAME || 'La Houssais' // Nom de l'arrêt (optionnel, pour affichage)
+    stops: process.env.BUS_STOPS ? JSON.parse(process.env.BUS_STOPS) : [
+      { stopId: 'LHOU', stopName: 'La Houssais' },
+      { stopId: 'TMOU', stopName: 'Trois Moulins' }
+    ],
+    // Support legacy single stop config
+    stopId: process.env.BUS_STOP_ID || 'LHOU',
+    stopName: process.env.BUS_STOP_NAME || 'La Houssais'
   },
   hue: {
     bridgeIp: process.env.HUE_BRIDGE_IP || '192.168.1.222',

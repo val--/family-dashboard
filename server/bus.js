@@ -61,19 +61,8 @@ function makeRequest(url) {
   });
 }
 
-async function getBusData() {
-  if (busCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
-    return busCache;
-  }
-
+async function getBusDataForStop(stopId, stopName) {
   try {
-    const stopId = config.bus.stopId;
-    const stopName = config.bus.stopName;
-    
-    if (!stopId) {
-      throw new Error('BUS_STOP_ID not configured');
-    }
-
     const url = `${NAOLIB_API_BASE_URL}/tempsattente.json/${stopId}`;
     const rawData = await makeRequest(url);
     const departures = Array.isArray(rawData) ? rawData : [];
@@ -111,6 +100,8 @@ async function getBusData() {
           time,
           isRealTime: departure.tempsReel === 'true' || departure.tempsReel === true,
           platform: departure.arret?.codeArret || null,
+          stopId: stopId,
+          stopName: stopName,
         };
       })
       .sort((a, b) => {
@@ -125,10 +116,44 @@ async function getBusData() {
         return extractMinutes(a.time) - extractMinutes(b.time);
       });
 
+    return formattedDepartures;
+  } catch (error) {
+    console.error(`[Bus] ❌ Erreur pour l'arrêt ${stopName} (${stopId}):`, error.message);
+    return [];
+  }
+}
+
+async function getBusData() {
+  if (busCache && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION) {
+    return busCache;
+  }
+
+  try {
+    // Support multiple stops
+    const stops = config.bus.stops && Array.isArray(config.bus.stops) && config.bus.stops.length > 0
+      ? config.bus.stops
+      : [{ stopId: config.bus.stopId, stopName: config.bus.stopName }];
+    
+    if (!stops || stops.length === 0 || !stops[0].stopId) {
+      throw new Error('BUS_STOP_ID or BUS_STOPS not configured');
+    }
+
+    // Récupérer les données pour tous les arrêts en parallèle
+    const allDeparturesPromises = stops.map(stop => 
+      getBusDataForStop(stop.stopId, stop.stopName)
+    );
+    
+    const allDeparturesArrays = await Promise.all(allDeparturesPromises);
+    
+    // Fusionner tous les départs en un seul tableau
+    const allDepartures = allDeparturesArrays.flat();
+
     const result = {
-      stopId: stopId,
-      stopName: stopName,
-      departures: formattedDepartures,
+      stops: stops.map(stop => ({
+        stopId: stop.stopId,
+        stopName: stop.stopName
+      })),
+      departures: allDepartures,
       lastUpdate: new Date().toISOString(),
     };
 
