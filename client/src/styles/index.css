@@ -2978,6 +2978,7 @@ body.spotify-page #root {
   flex-direction: column;
   gap: 6px;
   min-width: 0; /* Permet au contenu de se rétrécir si nécessaire */
+  min-height: 60px; /* Assure une hauteur minimale pour que la colonne soit visible */
 }
 
 .bus-departures-column-left {
@@ -2990,11 +2991,15 @@ body.spotify-page #root {
 }
 
 .bus-departures-empty {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
   font-style: italic;
   text-align: center;
-  padding: 8px;
+  padding: 12px 8px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bus-line-group {
@@ -4359,6 +4364,52 @@ body.spotify-page #root {
   border-color: rgba(255, 255, 255, 0.25);
   color: rgba(255, 255, 255, 0.9);
   transform: translateY(-50%) scale(1.1);
+}
+
+.spotify-widget-shuffle-button {
+  position: absolute;
+  right: 20px;
+  top: calc(50% + 50px);
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.7);
+  z-index: 101;
+  padding: 0;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.spotify-widget-shuffle-button * {
+  pointer-events: none;
+}
+
+.spotify-widget-shuffle-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.spotify-widget-shuffle-button.active {
+  background: rgba(29, 185, 84, 0.3);
+  border-color: rgba(29, 185, 84, 0.5);
+  color: #1db954;
+}
+
+.spotify-widget-shuffle-button.active:hover {
+  background: rgba(29, 185, 84, 0.4);
+  border-color: rgba(29, 185, 84, 0.6);
+  color: #1ed760;
 }
 
 .spotify-widget-volume-slider {

@@ -195,11 +195,33 @@ function BusWidget() {
                 line30Groups.map((group, groupIndex) => {
                   // Extraire les temps et les formater
                   const times = group.departures.map(dep => {
+                    // Si c'est "Départ proche", le garder tel quel
+                    if (dep.time === 'Départ proche') {
+                      return dep.time;
+                    }
                     // Extraire juste le nombre de minutes (ex: "Dans 9mn" -> "9mn")
                     const timeMatch = dep.time.match(/(\d+mn?)/);
                     return timeMatch ? timeMatch[1] : dep.time.replace('Dans ', '');
                   });
                   const hasRealTime = group.departures.some(dep => dep.isRealTime);
+                  
+                  // Vérifier si le premier temps est "Départ proche"
+                  const firstTime = times[0];
+                  const isFirstDepartureProche = firstTime === 'Départ proche';
+                  
+                  // Formater l'affichage
+                  let timeDisplay;
+                  if (isFirstDepartureProche && times.length > 1) {
+                    // "Départ proche, puis dans 13mn"
+                    const otherTimes = times.slice(1).join(', ');
+                    timeDisplay = `Départ proche, puis dans ${otherTimes}`;
+                  } else if (isFirstDepartureProche) {
+                    // Juste "Départ proche"
+                    timeDisplay = 'Départ proche';
+                  } else {
+                    // "Dans 9mn, 13mn"
+                    timeDisplay = `Dans ${times.join(', ')}`;
+                  }
                   
                   return (
                     <div key={`${group.line}-${group.direction}-${groupIndex}`} className="bus-departure-item">
@@ -207,7 +229,7 @@ function BusWidget() {
                       <div className="bus-departure-info">
                         <div className="bus-departure-direction">Vers {group.direction}</div>
                         <div className="bus-departure-time">
-                          Dans {times.join(', ')}
+                          {timeDisplay}
                           {hasRealTime && (
                             <span className="bus-realtime-indicator" title="Temps réel">●</span>
                           )}
@@ -217,7 +239,7 @@ function BusWidget() {
                   );
                 })
               ) : (
-                <div className="bus-departures-empty">Aucun départ ligne 30</div>
+                <div className="bus-departures-empty">Pas de prochain départ avant demain matin</div>
               )}
             </div>
             
@@ -227,11 +249,33 @@ function BusWidget() {
                 lineC4Groups.map((group, groupIndex) => {
                   // Extraire les temps et les formater
                   const times = group.departures.map(dep => {
+                    // Si c'est "Départ proche", le garder tel quel
+                    if (dep.time === 'Départ proche') {
+                      return dep.time;
+                    }
                     // Extraire juste le nombre de minutes (ex: "Dans 9mn" -> "9mn")
                     const timeMatch = dep.time.match(/(\d+mn?)/);
                     return timeMatch ? timeMatch[1] : dep.time.replace('Dans ', '');
                   });
                   const hasRealTime = group.departures.some(dep => dep.isRealTime);
+                  
+                  // Vérifier si le premier temps est "Départ proche"
+                  const firstTime = times[0];
+                  const isFirstDepartureProche = firstTime === 'Départ proche';
+                  
+                  // Formater l'affichage
+                  let timeDisplay;
+                  if (isFirstDepartureProche && times.length > 1) {
+                    // "Départ proche, puis dans 13mn"
+                    const otherTimes = times.slice(1).join(', ');
+                    timeDisplay = `Départ proche, puis dans ${otherTimes}`;
+                  } else if (isFirstDepartureProche) {
+                    // Juste "Départ proche"
+                    timeDisplay = 'Départ proche';
+                  } else {
+                    // "Dans 9mn, 13mn"
+                    timeDisplay = `Dans ${times.join(', ')}`;
+                  }
                   
                   return (
                     <div key={`${group.line}-${group.direction}-${groupIndex}`} className="bus-departure-item">
@@ -239,7 +283,7 @@ function BusWidget() {
                       <div className="bus-departure-info">
                         <div className="bus-departure-direction">Vers {group.direction}</div>
                         <div className="bus-departure-time">
-                          Dans {times.join(', ')}
+                          {timeDisplay}
                           {hasRealTime && (
                             <span className="bus-realtime-indicator" title="Temps réel">●</span>
                           )}
@@ -249,7 +293,7 @@ function BusWidget() {
                   );
                 })
               ) : (
-                <div className="bus-departures-empty">Aucun départ ligne C4</div>
+                <div className="bus-departures-empty">Pas de prochain départ avant demain matin</div>
               )}
             </div>
           </div>

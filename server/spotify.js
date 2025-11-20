@@ -465,6 +465,67 @@ async function setVolume(volumePercent, deviceId = null) {
 }
 
 /**
+ * Récupère l'état du player (shuffle, repeat, etc.)
+ */
+async function getPlayerState() {
+  try {
+    const response = await makeSpotifyRequest('/me/player', {
+      timeout: 10000
+    });
+    
+    if (response.statusCode === 204 || !response.data) {
+      return { shuffleState: false, repeatState: 'off' };
+    }
+    
+    return {
+      shuffleState: response.data.shuffle_state || false,
+      repeatState: response.data.repeat_state || 'off'
+    };
+  } catch (error) {
+    if (error.message.includes('404')) {
+      return { shuffleState: false, repeatState: 'off' };
+    }
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Active ou désactive le mode shuffle
+ */
+async function setShuffle(state, deviceId = null) {
+  try {
+    const params = new URLSearchParams({ state: state.toString() });
+    if (deviceId) {
+      params.append('device_id', deviceId);
+    }
+    
+    await makeSpotifyRequest(`/me/player/shuffle?${params.toString()}`, {
+      method: 'PUT',
+      timeout: 10000
+    });
+    
+    return { success: true };
+  } catch (error) {
+    if (error.message.includes('404')) {
+      return { success: false, error: 'No active device found' };
+    }
+    if (error.message.includes('401') || error.message.includes('403')) {
+      spotifyAccessToken = null;
+      spotifyRefreshToken = null;
+      currentUserInfo = null;
+      throw new Error('Authentication expired. Please re-authorize.');
+    }
+    throw error;
+  }
+}
+
+/**
  * Transfère la lecture vers un appareil spécifique
  */
 async function transferPlayback(deviceId, play = false) {
@@ -690,6 +751,8 @@ function getCurrentUser() {
 }
 
 module.exports = {
+  getPlayerState,
+  setShuffle,
   getAuthorizationUrl,
   exchangeCodeForToken,
   getCurrentlyPlaying,

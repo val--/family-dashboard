@@ -454,6 +454,15 @@ app.get('/api/spotify/status', async (req, res) => {
     const playback = await spotifyService.getCurrentlyPlaying();
     const currentUser = spotifyService.getCurrentUser();
     
+    // Récupérer l'état du player (shuffle, repeat)
+    let playerState = { shuffleState: false, repeatState: 'off' };
+    try {
+      playerState = await spotifyService.getPlayerState();
+    } catch (error) {
+      // Si l'erreur n'est pas critique, continuer sans l'état du player
+      console.error('Error fetching player state:', error);
+    }
+    
     // Si aucun morceau n'est en cours, récupérer le dernier morceau joué
     let lastPlayedTrack = null;
     if (!playback.track) {
@@ -468,6 +477,8 @@ app.get('/api/spotify/status', async (req, res) => {
     res.json({ 
       ...playback, 
       lastPlayedTrack,
+      shuffleState: playerState.shuffleState,
+      repeatState: playerState.repeatState,
       authenticated: true, 
       currentUser, 
       success: true 
@@ -633,6 +644,30 @@ app.post('/api/spotify/play/track', async (req, res) => {
   } catch (error) {
     console.error('Error playing track:', error);
     res.status(500).json({ error: error.message, success: false });
+  }
+});
+
+app.post('/api/spotify/shuffle', async (req, res) => {
+  try {
+    if (!spotifyService.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated', success: false });
+    }
+
+    const { state, deviceId } = req.body;
+
+    if (state === undefined || state === null) {
+      return res.status(400).json({ error: 'Shuffle state is required', success: false });
+    }
+
+    const result = await spotifyService.setShuffle(state === true || state === 'true', deviceId);
+    res.json({ ...result, success: true });
+  } catch (error) {
+    console.error('Error setting shuffle:', error);
+    if (error.message.includes('Network error')) {
+      res.status(503).json({ error: 'Network error: Unable to connect to Spotify. Please check your internet connection.', success: false });
+    } else {
+      res.status(500).json({ error: error.message, success: false });
+    }
   }
 });
 
