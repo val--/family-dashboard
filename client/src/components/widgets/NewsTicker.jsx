@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { REFRESH_INTERVAL } from '../../constants';
+import spotifyIcon from '../../assets/spotify.svg';
 
 function NewsTicker() {
   const [newsData, setNewsData] = useState(null);
@@ -15,6 +17,16 @@ function NewsTicker() {
   const scrollContainerRef = useRef(null);
   const clickTimeoutRef = useRef(null);
   const menuRef = useRef(null);
+  const [spotifyStatus, setSpotifyStatus] = useState({
+    loading: true,
+    authenticated: false,
+    isPlaying: false,
+    track: null,
+    lastTrack: null,
+    error: null,
+  });
+  const [isSpotifyActionPending, setIsSpotifyActionPending] = useState(false);
+  const navigate = useNavigate();
 
   const getNewsTypeLabel = () => {
     switch (newsType) {
@@ -96,6 +108,41 @@ function NewsTicker() {
     };
   }, [showNewsTypeMenu]);
 
+  const fetchSpotifyStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/spotify/status');
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch Spotify status');
+      }
+
+      setSpotifyStatus({
+        loading: false,
+        authenticated: data.authenticated,
+        isPlaying: data.isPlaying,
+        track: data.track || null,
+        lastTrack: data.lastPlayedTrack || null,
+        error: null,
+      });
+    } catch (err) {
+      setSpotifyStatus((prev) => ({
+        ...prev,
+        loading: false,
+        authenticated: false,
+        isPlaying: false,
+        track: null,
+        error: err.message,
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSpotifyStatus();
+    const interval = setInterval(fetchSpotifyStatus, 15000);
+    return () => clearInterval(interval);
+  }, [fetchSpotifyStatus]);
+
   // Calculate animation duration based on content width for constant speed
   // Target speed: approximately 50px per second
   useEffect(() => {
@@ -118,44 +165,115 @@ function NewsTicker() {
     }
   }, [newsData]);
 
-  if (loading && !newsData) {
-    return (
-      <div className="news-ticker">
-        <div className="news-ticker-label">
-          <span>{getNewsTypeLabel()}</span>
-        </div>
-        <div className="news-ticker-content">
-          <div className="news-ticker-loading">Chargement des actualités...</div>
-        </div>
-      </div>
-    );
-  }
+  const handleSpotifyOpen = useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    navigate('/spotify');
+  }, [navigate]);
 
-  if (error && !newsData) {
-    return (
-      <div className="news-ticker">
-        <div className="news-ticker-label">
-          <span>{getNewsTypeLabel()}</span>
-        </div>
-        <div className="news-ticker-content">
-          <div className="news-ticker-error">Actualités indisponibles</div>
-        </div>
-      </div>
-    );
-  }
+  const handleSpotifyTogglePlayback = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!spotifyStatus.authenticated) {
+      handleSpotifyOpen(e);
+      return;
+    }
+    if (isSpotifyActionPending) return;
+    setIsSpotifyActionPending(true);
+    try {
+      const endpoint = spotifyStatus.isPlaying ? '/api/spotify/pause' : '/api/spotify/play';
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Spotify action failed');
+      }
+      fetchSpotifyStatus();
+    } catch (err) {
+      console.error('Erreur Spotify mini-player:', err);
+    } finally {
+      setIsSpotifyActionPending(false);
+    }
+  };
 
-  if (!newsData || !newsData.articles || newsData.articles.length === 0) {
+  const stopPropagationTouch = (handler) => (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handler && handler(e);
+  };
+
+  const openSpotifyFromMini = (e) => {
+    handleSpotifyOpen(e);
+  };
+
+  const renderSpotifyMiniPlayer = () => {
+    const displayTrack = spotifyStatus.track || spotifyStatus.lastTrack;
     return (
-      <div className="news-ticker">
-        <div className="news-ticker-label">
-          <span>{getNewsTypeLabel()}</span>
+      <div
+        className="news-ticker-spotify"
+        onClick={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <button
+          className="news-ticker-spotify-icon-button"
+          onClick={handleSpotifyOpen}
+          onTouchEnd={stopPropagationTouch(handleSpotifyOpen)}
+          title="Afficher Spotify"
+        >
+          <img src={spotifyIcon} alt="Spotify" className="news-ticker-spotify-icon" />
+        </button>
+        <div className="news-ticker-spotify-info">
+          {spotifyStatus.loading ? (
+            <div className="news-ticker-spotify-status-text">Chargement…</div>
+          ) : displayTrack ? (
+            <>
+              <button
+                className="news-ticker-spotify-track"
+                onClick={openSpotifyFromMini}
+                onTouchEnd={stopPropagationTouch(openSpotifyFromMini)}
+              >
+                {displayTrack.name}
+              </button>
+              <button
+                className="news-ticker-spotify-artist"
+                onClick={openSpotifyFromMini}
+                onTouchEnd={stopPropagationTouch(openSpotifyFromMini)}
+              >
+                {displayTrack.artists}
+              </button>
+            </>
+          ) : (
+            <div className="news-ticker-spotify-status-text">
+              {spotifyStatus.authenticated ? 'En pause' : 'Non connecté'}
+            </div>
+          )}
         </div>
-        <div className="news-ticker-content">
-          <div className="news-ticker-empty">Aucune actualité disponible</div>
-        </div>
+        {spotifyStatus.authenticated && displayTrack && (
+          <button
+            className="news-ticker-spotify-toggle"
+            onClick={handleSpotifyTogglePlayback}
+            onTouchEnd={stopPropagationTouch(handleSpotifyTogglePlayback)}
+            disabled={isSpotifyActionPending}
+            aria-label={spotifyStatus.isPlaying ? 'Mettre en pause' : 'Lecture'}
+          >
+            {spotifyStatus.isPlaying ? (
+              <svg className="news-ticker-spotify-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+              </svg>
+            ) : (
+              <svg className="news-ticker-spotify-toggle-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            )}
+          </button>
+        )}
       </div>
     );
-  }
+  };
 
   // Helper function to find article at a specific X position
   const findArticleAtPosition = (x, scrollContainer, scrollText, articles) => {
@@ -348,36 +466,15 @@ function NewsTicker() {
     </span>
   )) : [];
 
-  return (
-    <>
-      <div 
-        className={`news-ticker ${isPaused ? 'news-ticker-paused' : ''}`} 
-        ref={tickerRef}
-        onClick={handleTickerClick}
-        onTouchEnd={(e) => {
-          e.preventDefault();
-          handleTickerClick(e);
-        }}
-        style={{ cursor: 'pointer' }}
-      >
-        <div 
-          className="news-ticker-label"
-          onClick={handleNewsTypeClick}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleNewsTypeClick(e);
-          }}
-          style={{ cursor: 'pointer' }}
-        >
-          <span>{getNewsTypeLabel()}</span>
-          {showNewsTypeMenu && (
-            <div 
-              className="news-ticker-type-menu" 
-              ref={menuRef} 
-              onClick={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
-            >
+  const hasArticles = newsData && newsData.articles && newsData.articles.length > 0;
+
+  const newsTypeMenu = showNewsTypeMenu && (
+    <div
+      className="news-ticker-type-menu"
+      ref={menuRef}
+      onClick={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
               <div 
                 className={`news-ticker-type-option ${newsType === 'news' ? 'active' : ''}`}
                 onClick={(e) => handleNewsTypeSelect('news', e)}
@@ -510,24 +607,58 @@ function NewsTicker() {
               >
                 Tourisme
               </div>
-            </div>
-          )}
+    </div>
+  );
+
+  let tickerContent;
+  if (loading && !newsData) {
+    tickerContent = <div className="news-ticker-loading">Chargement des actualités...</div>;
+  } else if (error && !newsData) {
+    tickerContent = <div className="news-ticker-error">Actualités indisponibles</div>;
+  } else if (!hasArticles) {
+    tickerContent = <div className="news-ticker-empty">Aucune actualité disponible</div>;
+  } else {
+    tickerContent = (
+      <div className="news-ticker-scroll-container" ref={scrollContainerRef}>
+        <div
+          className={`news-ticker-scrolling-text ${isPaused ? 'paused' : ''}`}
+          style={{
+            animationDuration: `${animationDuration}s`,
+          }}
+        >
+          {/* Duplicate content for seamless infinite scroll */}
+          {allNewsItems}
+          {allNewsItems}
+          {allNewsItems}
         </div>
-        <div className="news-ticker-content">
-          <div className="news-ticker-scroll-container" ref={scrollContainerRef}>
-            <div 
-              className={`news-ticker-scrolling-text ${isPaused ? 'paused' : ''}`}
-              style={{
-                animationDuration: `${animationDuration}s`
-              }}
-            >
-              {/* Duplicate content for seamless infinite scroll */}
-              {allNewsItems}
-              {allNewsItems}
-              {allNewsItems}
-            </div>
-          </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className={`news-ticker ${isPaused ? 'news-ticker-paused' : ''}`}
+        ref={tickerRef}
+        onClick={hasArticles ? handleTickerClick : undefined}
+        onTouchEnd={hasArticles ? stopPropagationTouch(handleTickerClick) : undefined}
+        style={{ cursor: hasArticles ? 'pointer' : 'default' }}
+      >
+        <div
+          className="news-ticker-label"
+          onClick={handleNewsTypeClick}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleNewsTypeClick(e);
+          }}
+          style={{ cursor: 'pointer' }}
+        >
+          <span>{getNewsTypeLabel()}</span>
+          {newsTypeMenu}
         </div>
+        <div className="news-ticker-content">{tickerContent}</div>
+        {renderSpotifyMiniPlayer()}
       </div>
 
       {/* Modal for article details */}

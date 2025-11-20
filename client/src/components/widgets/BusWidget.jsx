@@ -150,7 +150,12 @@ function BusWidget() {
         style={{ cursor: 'pointer' }}
       >
         <div className="bus-widget-header">
-          <h3 className="bus-widget-title">Prochains départs à partir de {busData.stopName || 'La Houssais'}</h3>
+          <h3 className="bus-widget-title">Prochains départs de {busData.stopName || 'La Houssais'}</h3>
+          {busData.lastUpdate && (
+            <span className="bus-widget-last-update">
+              màj à {new Date(busData.lastUpdate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}
+            </span>
+          )}
         </div>
         <div className="bus-widget-content">
           <div className="bus-departures">
@@ -173,11 +178,6 @@ function BusWidget() {
               </div>
             ))}
           </div>
-          {busData.lastUpdate && (
-            <div className="bus-widget-footer">
-              Dernière mise à jour à {new Date(busData.lastUpdate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          )}
         </div>
       </div>
 

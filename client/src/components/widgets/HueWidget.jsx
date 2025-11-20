@@ -77,7 +77,7 @@ function HueWidget() {
     return (
       <div className="hue-widget">
         <div className="hue-widget-header">
-          <h2 className="hue-widget-title">{roomName}</h2>
+          <h2 className="hue-widget-title">Lumières {roomName}</h2>
         </div>
         <div className="hue-widget-content">
           <div className="hue-widget-loading">Chargement...</div>
@@ -90,7 +90,7 @@ function HueWidget() {
     return (
       <div className="hue-widget">
         <div className="hue-widget-header">
-          <h2 className="hue-widget-title">{roomName}</h2>
+          <h2 className="hue-widget-title">Lumières {roomName}</h2>
         </div>
         <div className="hue-widget-content">
           <div className="hue-widget-error">{error}</div>
@@ -103,7 +103,7 @@ function HueWidget() {
     return (
       <div className="hue-widget">
         <div className="hue-widget-header">
-          <h2 className="hue-widget-title">{roomName}</h2>
+          <h2 className="hue-widget-title">Lumières {roomName}</h2>
         </div>
         <div className="hue-widget-content">
           <div className="hue-widget-empty">Aucune donnée disponible</div>
@@ -113,6 +113,7 @@ function HueWidget() {
   }
 
   const { room, status } = hueData;
+  const displayRoomName = room?.name || roomName;
 
   const handleToggle = async (e) => {
     e.stopPropagation();
@@ -193,7 +194,7 @@ function HueWidget() {
         className="hue-widget-header"
         style={status.color && status.anyOn ? { '--hue-color': status.color } : {}}
       >
-        <h2 className="hue-widget-title">{room.name}</h2>
+        <h2 className="hue-widget-title">Lumières {displayRoomName}</h2>
               <div className="hue-widget-header-count">
                  {status.lightsOn} / {status.lightsCount} lumières
                </div>

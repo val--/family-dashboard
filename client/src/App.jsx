@@ -5,6 +5,7 @@ import DashboardPages from './components/common/DashboardPages';
 import Electricity from './components/pages/Electricity';
 import Weather from './components/pages/Weather';
 import Hue from './components/pages/Hue';
+import HomePage2 from './components/pages/HomePage2';
 import Screensaver from './components/common/Screensaver';
 import { useScreensaver } from './hooks/useScreensaver';
 
@@ -379,6 +380,21 @@ function HuePage() {
   );
 }
 
+function SpotifyPage() {
+  useEffect(() => {
+    document.body.classList.add('spotify-page');
+    return () => {
+      document.body.classList.remove('spotify-page');
+    };
+  }, []);
+
+  return (
+    <div className="app app-spotify">
+      <HomePage2 />
+    </div>
+  );
+}
+
 function App() {
   // Activer l'écran de veille après le délai d'inactivité configuré
   const { isScreensaverActive, registerActivity } = useScreensaver(SCREENSAVER_IDLE_TIME);
@@ -392,6 +408,7 @@ function App() {
         <Route path="/electricity" element={<ElectricityPage />} />
         <Route path="/weather" element={<WeatherPage />} />
         <Route path="/hue" element={<HuePage />} />
+        <Route path="/spotify" element={<SpotifyPage />} />
       </Routes>
     </Router>
   );

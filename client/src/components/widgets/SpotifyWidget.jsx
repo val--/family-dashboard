@@ -51,10 +51,6 @@ function SpotifyWidget() {
         if (data.lastPlayedTrack) {
           setLastPlayedTrack(data.lastPlayedTrack);
         }
-        // Mettre à jour l'utilisateur connecté si fourni
-        if (data.currentUser) {
-          setCurrentUser(data.currentUser);
-        }
       }
     } catch (err) {
       console.error('Erreur lors de la récupération du statut Spotify:', err);
@@ -619,20 +615,6 @@ function SpotifyWidget() {
     return (
       <React.Fragment>
         <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
-          {currentUser && (
-            <div className="spotify-widget-user-selector">
-              <div className="spotify-widget-user-button" style={{ cursor: 'default' }}>
-                {currentUser.images && currentUser.images.length > 0 ? (
-                  <img src={currentUser.images[0].url} alt={currentUser.displayName} className="spotify-widget-user-avatar" />
-                ) : (
-                  <div className="spotify-widget-user-avatar-placeholder">
-                    {currentUser.displayName?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                )}
-                <span className="spotify-widget-user-name">{currentUser.displayName || 'Utilisateur'}</span>
-              </div>
-            </div>
-          )}
           <div className="spotify-widget-content">
             {displayTrack.albumArt && (
               <div className="spotify-widget-album-art">
@@ -727,7 +709,7 @@ function SpotifyWidget() {
         disabled={isTransitioning}
         aria-label="Ouvrir les playlists"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm3-10h13v2H7zm0 5h13v2H7zm0 5h13v2H7z"/>
         </svg>
       </button>
@@ -889,7 +871,7 @@ function SpotifyWidget() {
         disabled={isTransitioning}
         aria-label="Ouvrir les playlists"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm3-10h13v2H7zm0 5h13v2H7zm0 5h13v2H7z"/>
         </svg>
       </button>

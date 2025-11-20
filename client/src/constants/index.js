@@ -1,5 +1,5 @@
 // Calendar title used across the application
-export const CALENDAR_TITLE = 'Agenda de la famille Le Guiberre';
+export const CALENDAR_TITLE = 'Agenda';
 
 // API configuration
 export const API_URL = '/api/events';
