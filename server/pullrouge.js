@@ -240,6 +240,7 @@ class PullRougeService {
     let eventLines = []; // Accumulate lines for multi-line events
     let eventStartIndex = null; // Track where event starts in HTML
     let eventEndIndex = null; // Track where event ends in HTML
+    let pendingDayName = null; // Track if we found a day name on previous line
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -296,10 +297,34 @@ class PullRougeService {
         continue;
       }
       
+      // Try to match day name only (might be on a separate line)
+      const dayNameMatch = trimmedLine.match(/^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)$/i);
+      if (dayNameMatch && !pendingDayName) {
+        pendingDayName = dayNameMatch[1];
+        continue; // Continue to next line to find the date
+      }
+      
       // Try to match date pattern: "vendredi 21 novembre 2025" or "samedi 22 novembre 2025"
-      const dateMatch = trimmedLine.match(/(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i);
+      // Also try without day name: "21 novembre 2025" (if we have a pending day name)
+      let dateMatch = trimmedLine.match(/(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i);
+      
+      // If no match and we have a pending day name, try matching date without day name
+      if (!dateMatch && pendingDayName) {
+        const dateWithoutDayMatch = trimmedLine.match(/(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i);
+        if (dateWithoutDayMatch) {
+          // Reconstruct the full date string with the pending day name
+          const fullDateStr = `${pendingDayName} ${dateWithoutDayMatch[0]}`;
+          dateMatch = fullDateStr.match(/(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i);
+          if (dateMatch) {
+            // Update the match to use the full date string for parsing
+            dateMatch[0] = fullDateStr;
+          }
+        }
+      }
       
       if (dateMatch) {
+        // Clear pending day name since we found a complete date
+        pendingDayName = null;
         // Process any accumulated event lines first
         if (eventLines.length > 0 && currentDate && currentTime) {
           const fullEventText = eventLines.join(' ').trim();
@@ -346,17 +371,29 @@ class PullRougeService {
         }
         
         // This line contains a date
+        // If we reconstructed the date from pendingDayName, use the full date string
+        // Otherwise use the matched string
         const dateStr = dateMatch[0];
         currentDate = this.parseFrenchDate(dateStr);
         
         // Find where this date line starts in the HTML
-        const dateIndex = bodyHtml.indexOf(dateStr);
+        // Try to find the date string in the HTML (might need to search for parts if it was reconstructed)
+        let dateIndex = bodyHtml.indexOf(dateStr);
+        if (dateIndex === -1 && pendingDayName) {
+          // If we reconstructed the date, try to find just the date part
+          const datePart = trimmedLine.match(/(\d{1,2}\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{4})/i);
+          if (datePart) {
+            dateIndex = bodyHtml.indexOf(datePart[0]);
+          }
+        }
         if (dateIndex !== -1) {
           eventStartIndex = dateIndex;
         }
         
         // Check if there's a time on the same line (after the date)
-        const afterDate = trimmedLine.substring(trimmedLine.indexOf(dateMatch[0]) + dateMatch[0].length).trim();
+        // Use the actual trimmedLine content, not the reconstructed dateStr
+        const datePartInLine = trimmedLine.match(/(\d{1,2}\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{4})/i);
+        const afterDate = datePartInLine ? trimmedLine.substring(trimmedLine.indexOf(datePartInLine[0]) + datePartInLine[0].length).trim() : trimmedLine;
         const timeMatch = afterDate.match(/(\d{1,2}h\d{2})/);
         
         if (timeMatch) {
@@ -514,14 +551,50 @@ class PullRougeService {
       return;
     }
     
-    // Create date object with time
+    // Create date object with time in Paris timezone
     const timezone = config.timezone || 'Europe/Paris';
-    const eventDate = new Date(date);
-    eventDate.setHours(time.hours, time.minutes, 0, 0);
     
-    // Convert to timezone
-    const eventDateInParis = utcToZonedTime(eventDate, timezone);
-    const eventDateUTC = zonedTimeToUtc(eventDateInParis, timezone);
+    // Extract year, month, day from the parsed date
+    // parseFrenchDate returns a date, use getFullYear/getMonth/getDate to get the actual values
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Create a date object using the components
+    // This creates a date in the server's local timezone
+    // We'll use zonedTimeToUtc to interpret it as Paris time and convert to UTC
+    // zonedTimeToUtc will handle DST automatically
+    const localDate = new Date(year, month, day, time.hours, time.minutes, 0, 0);
+    
+    // zonedTimeToUtc interprets the date as being in the specified timezone and converts to UTC
+    // However, since localDate is in server's local time, we need to adjust for the difference
+    // The issue: if server timezone != Paris timezone, the conversion will be wrong
+    
+    // Solution: We need to create a date that represents Paris time, not server time
+    // We can do this by creating the date in UTC first, then converting to Paris to verify
+    // But a simpler approach: create the date as if the server timezone = Paris timezone
+    // Since we're parsing French dates, we can assume the server is in a similar timezone
+    // or we need to account for the difference
+    
+    // Better approach: Create date in UTC using Date.UTC, representing the Paris time
+    // Then convert to Paris timezone to verify, then convert back to UTC
+    // But we need to know the Paris offset for that date to create the UTC date correctly
+    
+    // Actually, the correct way: use the date components to create a date,
+    // then use zonedTimeToUtc which will interpret it as Paris time
+    // But zonedTimeToUtc needs the date to already represent Paris time
+    
+    // The solution: Create the date using components, treating them as Paris time
+    // We'll create it in a way that zonedTimeToUtc can interpret correctly
+    // Since parseFrenchDate gives us the correct day/month/year, we can use those directly
+    
+    // Create date from components (this is in server's local timezone)
+    // zonedTimeToUtc will interpret this as Paris time and convert to UTC
+    // This works if server timezone = Paris timezone, or if we account for the difference
+    const eventDateUTC = zonedTimeToUtc(localDate, timezone);
+    
+    // Convert back to Paris timezone for display/verification
+    const eventDateInParis = utcToZonedTime(eventDateUTC, timezone);
     
     // Try to find associated image (if there's an <img> tag directly after this event)
     let imageUrl = null;

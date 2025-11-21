@@ -10,6 +10,7 @@ import { EventItem, formatEventTime } from '../common/EventItem';
 function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEvents, onToggleGoogleEvents, onToggleNantesEvents, onTogglePullrougeEvents, availableCategories = [], selectedCategories = null, onToggleCategory, onSetCategories }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const navigate = useNavigate();
   const categoryFilterRef = useRef(null);
 
@@ -52,6 +53,80 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
       };
     }
   }, [showCategoryFilter]);
+
+  // Handle scroll to show/hide scroll to top button
+  useEffect(() => {
+    let appContainer = null;
+    let scrollListener = null;
+
+    const handleScroll = () => {
+      let scrollTop = 0;
+      
+      // Try to find the .app container (parent scroll container)
+      if (!appContainer) {
+        appContainer = document.querySelector('.app');
+      }
+      
+      if (appContainer) {
+        scrollTop = appContainer.scrollTop;
+      } else {
+        // Fallback to window scroll
+        scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      }
+      
+      setShowScrollTop(scrollTop > 100); // Show button after scrolling 100px
+    };
+
+    // Wait a bit for the DOM to be ready, then set up scroll listener
+    const setupScrollListener = () => {
+      appContainer = document.querySelector('.app');
+      
+      if (appContainer) {
+        scrollListener = appContainer;
+        appContainer.addEventListener('scroll', handleScroll, { passive: true });
+        // Check initial scroll position
+        handleScroll();
+      } else {
+        // Fallback to window scroll
+        scrollListener = window;
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+      }
+    };
+
+    // Try immediately, then retry after a short delay if needed
+    setupScrollListener();
+    const timeoutId = setTimeout(() => {
+      if (!scrollListener) {
+        setupScrollListener();
+      }
+    }, 200);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (scrollListener) {
+        scrollListener.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
+
+  // Scroll to top function
+  const scrollToTop = () => {
+    // Try to scroll the .app container
+    const appContainer = document.querySelector('.app');
+    if (appContainer) {
+      appContainer.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    } else {
+      // Fallback to window scroll
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   return (
     <div className="calendar">
@@ -348,6 +423,16 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
           </div>
         );
       })}
+      {showScrollTop && (
+        <button 
+          className="scroll-to-top-button" 
+          onClick={scrollToTop}
+          aria-label="Retour en haut"
+          title="Retour en haut"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 }

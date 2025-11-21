@@ -20,6 +20,7 @@ function CalendarPage() {
   const [nantesEvents, setNantesEvents] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState(null);
   const { showGoogleEvents, showNantesEvents, showPullrougeEvents, nantesCategories, toggleGoogleEvents, toggleNantesEvents, togglePullrougeEvents, toggleNantesCategory, setNantesCategories } = useCalendarFilters();
   const appRef = useSimpleDragScroll('a, button, .event-item');
@@ -33,8 +34,10 @@ function CalendarPage() {
   const fetchEvents = async () => {
     try {
       setError(null);
+      setLoading(true);
       
       // Fetch Google Calendar events (which includes PullRouge events merged by the server)
+      setLoadingStep('Chargement de l\'agenda familial...');
       const googleResponse = await fetch(API_URL);
       const googleData = await googleResponse.json();
       
@@ -51,6 +54,7 @@ function CalendarPage() {
 
       // Fetch Nantes events with category filter
       // null = show all, [] = show none, [cat1, cat2] = show specific
+      setLoadingStep('Chargement des événements Nantes...');
       const categoriesParam = nantesCategories === null 
         ? '' // null = no filter, show all
         : `?categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
@@ -63,11 +67,14 @@ function CalendarPage() {
         console.warn('Failed to fetch Nantes events:', nantesData.message);
         setNantesEvents([]);
       }
+      
+      setLoadingStep('Finalisation...');
     } catch (err) {
       console.error('Error fetching events:', err);
       setError(err.message || 'Erreur lors du chargement des événements');
     } finally {
       setLoading(false);
+      setLoadingStep('');
     }
   };
 
@@ -129,7 +136,12 @@ function CalendarPage() {
     return (
       <div className="app" ref={appRef}>
         <div className="calendar">
-          <div className="calendar-loading">Chargement...</div>
+          <div className="calendar-loading">
+            <div className="calendar-loading-spinner"></div>
+            <div className="calendar-loading-message">
+              {loadingStep || 'Chargement de l\'agenda...'}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -139,7 +151,11 @@ function CalendarPage() {
     return (
       <div className="app" ref={appRef}>
         <div className="calendar">
-          <div className="calendar-error">{error}</div>
+          <div className="calendar-error">
+            <div className="calendar-error-icon">⚠️</div>
+            <div className="calendar-error-title">Oups, une erreur est survenue</div>
+            <div className="calendar-error-message">{error}</div>
+          </div>
         </div>
       </div>
     );
