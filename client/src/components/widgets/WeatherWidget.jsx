@@ -151,7 +151,7 @@ function WeatherWidget() {
         
         <div className="weather-forecast">
           {weatherData.forecast && weatherData.forecast.length > 0 ? (
-            weatherData.forecast.slice(0, 3).map((day, index) => (
+            weatherData.forecast.slice(0, 2).map((day, index) => (
               <div key={index} className="weather-forecast-item">
                 <div className="weather-forecast-day">{formatDate(day.date)}</div>
                 <img 

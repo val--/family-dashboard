@@ -1593,6 +1593,10 @@ body.spotify-page #root {
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .hue-compact-indicator.on {
@@ -1608,6 +1612,24 @@ body.spotify-page #root {
 .hue-compact-indicator:hover {
   transform: scale(1.1);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.hue-compact-indicator .hue-status-icon {
+  width: 16px;
+  height: 16px;
+  color: white;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hue-compact-indicator .hue-status-loading {
+  font-size: 14px;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  z-index: 1;
+  pointer-events: none;
+  line-height: 1;
 }
 
 .hue-compact-toggle {
