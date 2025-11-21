@@ -16,7 +16,13 @@ function loadFiltersFromStorage() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        return { ...defaultFilters, ...parsed };
+        const loadedFilters = { ...defaultFilters, ...parsed };
+        // Si "Événements Nantes" est activé mais qu'aucune catégorie n'est sélectionnée,
+        // sélectionner toutes les catégories par défaut
+        if (loadedFilters.showNantesEvents && (loadedFilters.nantesCategories === undefined || (Array.isArray(loadedFilters.nantesCategories) && loadedFilters.nantesCategories.length === 0))) {
+          loadedFilters.nantesCategories = null;
+        }
+        return loadedFilters;
       }
     }
   } catch (error) {
@@ -44,7 +50,14 @@ export function useCalendarFilters() {
   };
 
   const toggleNantesEvents = () => {
-    updateFilters({ ...filters, showNantesEvents: !filters.showNantesEvents });
+    const newShowNantesEvents = !filters.showNantesEvents;
+    // Si on active "Événements Nantes" et qu'aucune catégorie n'est sélectionnée,
+    // sélectionner toutes les catégories par défaut
+    if (newShowNantesEvents && (filters.nantesCategories === undefined || (Array.isArray(filters.nantesCategories) && filters.nantesCategories.length === 0))) {
+      updateFilters({ ...filters, showNantesEvents: newShowNantesEvents, nantesCategories: null });
+    } else {
+      updateFilters({ ...filters, showNantesEvents: newShowNantesEvents });
+    }
   };
 
   const togglePullrougeEvents = () => {

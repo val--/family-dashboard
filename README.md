@@ -373,3 +373,5 @@ docker-compose down -v
   - Vue d'ensemble de la consommation réseau de la maison
 
 - **Utilitaires / outils basiques** comme un minuteur (mais besoin d'une enceinte)
+
+- ** Utilisation IA** pour des conseils par rapport à l'agenda par exemple

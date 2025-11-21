@@ -51,7 +51,7 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
     );
   }
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside and prevent scroll when open
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (categoryFilterRef.current && !categoryFilterRef.current.contains(event.target)) {
@@ -60,10 +60,33 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
     };
 
     if (showCategoryFilter) {
+      // Empêcher le scroll quand le dropdown est ouvert
+      const appContainer = document.querySelector('.app');
+      if (appContainer) {
+        appContainer.style.overflow = 'hidden';
+      } else {
+        // Fallback au body si .app n'existe pas
+        document.body.style.overflow = 'hidden';
+      }
+      
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
+        // Réactiver le scroll quand le dropdown est fermé
+        if (appContainer) {
+          appContainer.style.overflow = '';
+        } else {
+          document.body.style.overflow = '';
+        }
         document.removeEventListener('mousedown', handleClickOutside);
       };
+    } else {
+      // S'assurer que le scroll est réactivé si le dropdown est fermé
+      const appContainer = document.querySelector('.app');
+      if (appContainer) {
+        appContainer.style.overflow = '';
+      } else {
+        document.body.style.overflow = '';
+      }
     }
   }, [showCategoryFilter]);
 
@@ -198,11 +221,7 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
                 onClick={() => setShowCategoryFilter(!showCategoryFilter)}
                 title="Filtrer par catégorie"
               >
-                {selectedCategories === null 
-                  ? `Toutes catégories (${availableCategories.length})`
-                  : selectedCategories.length > 0
-                  ? `Catégories (${selectedCategories.length}/${availableCategories.length})`
-                  : 'Aucune catégorie'}
+                Catégories
                 <span className="calendar-filter-categories-arrow">
                   {showCategoryFilter ? '▲' : '▼'}
                 </span>
@@ -293,6 +312,12 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
                   </div>
                   <div className="event-modal-content">
                     <div className="event-details-section">
+                      <div className="event-details-label">Date</div>
+                      <div className="event-details-value">
+                        {format(parseISO(selectedEventObj.date || selectedEventObj.start), 'EEEE d MMMM yyyy', { locale: fr })}
+                      </div>
+                    </div>
+                    <div className="event-details-section">
                       <div className="event-details-label">Horaires</div>
                       <div className="event-details-value">
                         {selectedEventObj.isAllDay ? (
@@ -371,6 +396,12 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
                   <h2 className="event-modal-title">{selectedEventObj.title}</h2>
                 </div>
                 <div className="event-modal-content">
+                  <div className="event-details-section">
+                    <div className="event-details-label">Date</div>
+                    <div className="event-details-value">
+                      {format(parseISO(selectedEventObj.date || selectedEventObj.start), 'EEEE d MMMM yyyy', { locale: fr })}
+                    </div>
+                  </div>
                   <div className="event-details-section">
                     <div className="event-details-label">Horaires</div>
                     <div className="event-details-value">

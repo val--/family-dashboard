@@ -12,6 +12,7 @@ function Screensaver({ onExit }) {
   const shouldExitRef = useRef(false);
   const [weatherInfo, setWeatherInfo] = useState(null);
   const [spotifyTrack, setSpotifyTrack] = useState(null);
+  const [hasActiveDevice, setHasActiveDevice] = useState(false);
 
   useEffect(() => {
     // Mettre à jour l'heure chaque seconde
@@ -72,17 +73,48 @@ function Screensaver({ onExit }) {
         throw new Error('Spotify fetch failed');
       }
       const result = await response.json();
-      if (result.success && result.authenticated && result.track) {
-        setSpotifyTrack({
-          artist: result.track.artists,
-          name: result.track.name,
-          isPlaying: result.isPlaying || false,
-        });
+      if (result.success && result.authenticated) {
+        // Vérifier s'il y a un device actif
+        try {
+          const devicesResponse = await fetch('/api/spotify/devices');
+          const devicesData = await devicesResponse.json();
+          if (devicesData.success && devicesData.devices) {
+            const activeDevice = devicesData.devices.find(d => d.isActive);
+            const hasActive = !!activeDevice;
+            setHasActiveDevice(hasActive);
+            
+            // N'afficher le morceau que si un device est actif
+            if (hasActive) {
+              // Utiliser le morceau actuel (même en pause) ou le dernier morceau joué
+              const track = result.track || result.lastPlayedTrack;
+              if (track) {
+                setSpotifyTrack({
+                  artist: track.artists,
+                  name: track.name,
+                  isPlaying: result.isPlaying || false,
+                });
+              } else {
+                setSpotifyTrack(null);
+              }
+            } else {
+              setSpotifyTrack(null);
+            }
+          } else {
+            setHasActiveDevice(false);
+            setSpotifyTrack(null);
+          }
+        } catch (err) {
+          console.error('Error fetching devices:', err);
+          setHasActiveDevice(false);
+          setSpotifyTrack(null);
+        }
       } else {
+        setHasActiveDevice(false);
         setSpotifyTrack(null);
       }
     } catch (error) {
       console.error('Erreur Spotify écran de veille:', error);
+      setHasActiveDevice(false);
       setSpotifyTrack(null);
     }
   }, []);

@@ -1347,7 +1347,7 @@ body.spotify-page #root {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10001;
   animation: fadeIn 0.2s ease-out;
   padding: 20px;
   box-sizing: border-box;
