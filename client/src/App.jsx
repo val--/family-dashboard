@@ -405,7 +405,6 @@ function SpotifyPage() {
         onClick={() => navigate('/')}
         aria-label="Retour à l'accueil"
       >
-        ←
       </button>
       <HomePage2 />
     </div>

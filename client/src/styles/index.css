@@ -106,6 +106,13 @@ body.spotify-page #root {
   text-indent: 0;
 }
 
+.spotify-back-button::before {
+  content: '←';
+  display: block;
+  transform: translateY(-2px);
+  line-height: 1;
+}
+
 .spotify-back-button:hover {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.25);
