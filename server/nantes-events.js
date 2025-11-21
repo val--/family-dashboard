@@ -3,9 +3,9 @@ const { parseISO, format, startOfDay, eachDayOfInterval, isSameDay } = require('
 const { zonedTimeToUtc, utcToZonedTime } = require('date-fns-tz');
 const config = require('./config');
 
-// Configuration
-const API_BASE_URL = 'https://metropole.nantes.fr/node/9543/filters';
-const PAGE_SIZE = 100; // Nombre d'événements par page
+// Configuration - Nouvelle API Open Data Nantes Métropole
+const API_BASE_URL = 'https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_agenda-evenements-nantes-metropole_v2/records';
+const PAGE_SIZE = 100; // Limite max de l'API
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 class NantesEventsService {
@@ -31,33 +31,38 @@ class NantesEventsService {
     }
 
     try {
-      // Récupérer les agrégations pour obtenir toutes les catégories disponibles
-      const params = new URLSearchParams({
-        'aggregations[0][k]': 'nm-types',
-        'aggregations[0][t]': 'af',
-        'aggregations[0][m]': '',
-        'aggregations[0][f]': 'nm-types',
-        'aggregations[0][s]': '2000'
-      });
+      // Récupérer un échantillon d'événements pour extraire les catégories
+      const now = new Date();
+      const timezone = config.timezone || 'Europe/Paris';
+      const today = startOfDay(utcToZonedTime(now, timezone));
+      const todayStr = format(today, 'yyyy-MM-dd');
 
-      const url = `${API_BASE_URL}?${params.toString()}`;
+      const url = `${API_BASE_URL}?limit=${PAGE_SIZE}&where=date%3E%3D%22${todayStr}%22`;
       const response = await axios.get(url, {
         timeout: 30000,
         headers: { 
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0'
+          'Accept': 'application/json'
         }
       });
 
       const data = response.data;
-      if (!data || !data.aggregations || !data.aggregations['nm-types']) {
+      if (!data || !data.results) {
         return [];
       }
 
-      // Extraire les catégories depuis les agrégations
-      const categories = data.aggregations['nm-types']
-        .map(agg => agg.label)
-        .sort();
+      // Extraire toutes les catégories uniques depuis types_libelles
+      const categoriesSet = new Set();
+      data.results.forEach(record => {
+        if (record.types_libelles && Array.isArray(record.types_libelles)) {
+          record.types_libelles.forEach(cat => {
+            if (cat && cat.trim()) {
+              categoriesSet.add(cat.trim());
+            }
+          });
+        }
+      });
+
+      const categories = Array.from(categoriesSet).sort();
 
       // Mettre en cache
       this.categoriesCache = categories;
@@ -68,6 +73,65 @@ class NantesEventsService {
       console.error('Error fetching available categories:', error);
       return [];
     }
+  }
+
+  async fetchAllRecords(selectedCategories = null) {
+    const now = new Date();
+    const timezone = config.timezone || 'Europe/Paris';
+    const today = startOfDay(utcToZonedTime(now, timezone));
+    const todayStr = format(today, 'yyyy-MM-dd');
+
+    let allRecords = [];
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      try {
+        // Construire la requête avec filtres
+        let whereClause = `date>=%22${todayStr}%22`;
+        
+        // Filtrer par catégories si nécessaire (côté API si possible)
+        // Pour l'instant, on récupère tout et on filtre après
+        
+        // Filtrer les événements annulés
+        whereClause += `%20AND%20annule=%22non%22`;
+        
+        const url = `${API_BASE_URL}?limit=${PAGE_SIZE}&offset=${offset}&where=${whereClause}&order_by=date%20ASC`;
+        
+        const response = await axios.get(url, {
+          timeout: 30000,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        const data = response.data;
+        if (!data || !data.results || data.results.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        allRecords = allRecords.concat(data.results);
+
+        // Vérifier s'il y a plus de résultats
+        if (data.results.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          offset += PAGE_SIZE;
+        }
+
+        // Limite de sécurité pour éviter les boucles infinies
+        if (offset > 10000) {
+          console.warn('Reached safety limit for pagination');
+          break;
+        }
+      } catch (error) {
+        console.error('Error fetching records:', error);
+        hasMore = false;
+      }
+    }
+
+    return allRecords;
   }
 
   async getEvents(selectedCategories = null) {
@@ -95,100 +159,154 @@ class NantesEventsService {
       const timezone = config.timezone || 'Europe/Paris';
       const today = startOfDay(utcToZonedTime(now, timezone));
 
-      // Construire les paramètres de la requête
-      const params = new URLSearchParams({
-        page: '0',
-        size: PAGE_SIZE.toString(),
-        sort: 'timingsWithFeatured.asc'
-      });
+      // Récupérer tous les enregistrements
+      const records = await this.fetchAllRecords(selectedCategories);
 
-      // Ajouter les agrégations pour obtenir les catégories
-      params.append('aggregations[0][k]', 'nm-types');
-      params.append('aggregations[0][t]', 'af');
-      params.append('aggregations[0][m]', '');
-      params.append('aggregations[0][f]', 'nm-types');
-      params.append('aggregations[0][s]', '2000');
+      // Regrouper les enregistrements par id_manif (même événement, différentes dates)
+      const eventsMap = new Map();
 
-      // Ajouter les filtres de catégories si nécessaire
-      if (selectedCategories && selectedCategories.length > 0) {
-        // Pour chaque catégorie sélectionnée, on doit trouver son ID depuis les agrégations
-        // Pour l'instant, on va filtrer côté client après récupération
-        // TODO: Implémenter le filtrage côté API si possible
-      }
-
-      const url = `${API_BASE_URL}?${params.toString()}`;
-
-      const response = await axios.get(url, {
-        timeout: 30000,
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0'
+      records.forEach(record => {
+        // Ignorer les événements annulés ou reportés
+        if (record.annule === 'oui' || record.reporte === 'oui') {
+          return;
         }
+
+        const idManif = record.id_manif;
+        if (!idManif) return;
+
+        if (!eventsMap.has(idManif)) {
+          // Créer un nouvel événement
+          const title = record.nom || 'Sans titre';
+          const types = record.types_libelles || [];
+          const typeLabels = types.join(',');
+          
+          // Construire le lieu
+          let locationString = '';
+          if (record.lieu) {
+            locationString = record.lieu;
+          }
+          if (record.adresse && record.adresse !== '.') {
+            if (locationString) {
+              locationString += `, ${record.adresse}`;
+            } else {
+              locationString = record.adresse;
+            }
+          }
+          if (record.ville) {
+            if (locationString) {
+              locationString += `, ${record.ville}`;
+            } else {
+              locationString = record.ville;
+            }
+          }
+
+          // Description
+          const description = record.description_evt || record.description || '';
+          // Nettoyer le HTML de la description si présent
+          const cleanDescription = description.replace(/<[^>]*>/g, '').trim();
+
+          // URL
+          const url = record.lien_agenda || record.url_site || null;
+
+          // Organisateur
+          const organizer = record.emetteur || null;
+
+          // Image
+          const imageUrl = record.media_url || null;
+
+          eventsMap.set(idManif, {
+            id_manif: idManif,
+            title,
+            type: typeLabels || null,
+            locationString,
+            description: cleanDescription || null,
+            url,
+            organizer,
+            image: imageUrl,
+            timings: [] // Sera rempli avec les occurrences
+          });
+        }
+
+        // Ajouter cette occurrence (date/heure) à l'événement
+        const event = eventsMap.get(idManif);
+        
+        // Parser la date et l'heure
+        const dateStr = record.date;
+        if (!dateStr) return;
+
+        // Parser la date (format YYYY-MM-DD)
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const heureDebut = record.heure_debut || null;
+        const heureFin = record.heure_fin || null;
+
+        // Ignorer l'heure si l'événement est "toute la journée"
+        const ignoreHeure = !heureDebut || heureDebut === '';
+
+        // Construire les timestamps en timezone locale d'abord
+        let beginDate, endDate;
+        
+        if (ignoreHeure) {
+          // Événement toute la journée - créer une date locale
+          beginDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+          endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+        } else {
+          // Parser l'heure (format HH:mm)
+          const [hours, minutes] = heureDebut.split(':').map(Number);
+          beginDate = new Date(year, month - 1, day, hours || 0, minutes || 0, 0, 0);
+
+          if (heureFin) {
+            const [endHours, endMinutes] = heureFin.split(':').map(Number);
+            endDate = new Date(year, month - 1, day, endHours || 0, endMinutes || 0, 0, 0);
+          } else {
+            endDate = new Date(beginDate);
+            endDate.setHours(beginDate.getHours() + 2); // Par défaut 2h si pas d'heure de fin
+          }
+        }
+
+        // Interpréter cette date locale comme étant en timezone Paris et convertir en UTC
+        const beginUTC = zonedTimeToUtc(beginDate, timezone);
+        const endUTC = zonedTimeToUtc(endDate, timezone);
+        
+        // Convertir en timezone Paris pour vérification
+        const startInParis = utcToZonedTime(beginUTC, timezone);
+        const endInParis = utcToZonedTime(endUTC, timezone);
+        
+        // Vérifier si l'événement se termine après aujourd'hui
+        if (endInParis < today) {
+          return; // Ignorer les événements déjà terminés
+        }
+
+        event.timings.push({
+          begin: beginUTC.toISOString(),
+          end: endUTC.toISOString(),
+          ignoreHeure,
+          heureDebut,
+          heureFin,
+          startInParis: startInParis.toISOString(),
+          endInParis: endInParis.toISOString()
+        });
       });
-
-      const data = response.data;
-
-      if (!data || !data.events) {
-        return [];
-      }
 
       // Formater les événements pour correspondre au format des événements Google Calendar
       const formattedEvents = [];
 
-      data.events.forEach(event => {
-        const title = event.title?.fr || 'Sans titre';
-        const timings = event.timings || [];
-        const types = event['nm-types'] || [];
-        const typeLabels = types.map(t => t.label).join(',');
-        const location = event.location;
-        const description = event.description?.fr || event.longDescription?.fr || '';
-        const url = event.originAgenda?.url || null;
-        const organizer = event.originAgenda?.title || null;
+      eventsMap.forEach((event, idManif) => {
+        const { title, type, locationString, description, url, organizer, image, timings } = event;
 
-        // Construire l'URL de l'image si disponible
-        let imageUrl = null;
-        if (event.image && event.image.filename && event.image.base) {
-          // Utiliser la variante "full" si disponible, sinon le fichier de base
-          const variant = event.image.variants?.find(v => v.type === 'full');
-          const filename = variant ? variant.filename : event.image.filename;
-          imageUrl = `${event.image.base}${filename}`;
-        }
-
-        // Construire le lieu
-        let locationString = '';
-        if (location) {
-          if (location.name) {
-            locationString = location.name;
-          }
-          if (location.address && location.address !== '.') {
-            if (locationString) {
-              locationString += `, ${location.address}`;
-            } else {
-              locationString = location.address;
-            }
-          }
-          if (location.city) {
-            if (locationString) {
-              locationString += `, ${location.city}`;
-            } else {
-              locationString = location.city;
-            }
+        // Filtrer par catégories si nécessaire
+        if (selectedCategories && selectedCategories.length > 0) {
+          if (!type) return;
+          const eventTypes = type.split(',').map(t => t.trim());
+          if (!eventTypes.some(t => selectedCategories.includes(t))) {
+            return;
           }
         }
 
         // Pour chaque timing, créer un événement (comme pour les événements multi-jours)
         timings.forEach((timing, timingIndex) => {
-          const beginDate = parseISO(timing.begin);
-          const endDate = parseISO(timing.end);
-
-          // Convertir en timezone Paris (déjà en Europe/Paris normalement)
-          const startInParis = utcToZonedTime(beginDate, timezone);
-          const endInParis = utcToZonedTime(endDate, timezone);
-
-          // Vérifier si l'événement se termine après aujourd'hui
-          if (endInParis < today) {
-            return; // Ignorer les événements déjà terminés
-          }
+          // Utiliser les dates déjà converties en Paris timezone
+          const startInParis = parseISO(timing.startInParis);
+          const endInParis = parseISO(timing.endInParis);
 
           // Vérifier si l'événement s'étend sur plusieurs jours
           const startDay = startOfDay(startInParis);
@@ -200,7 +318,7 @@ class NantesEventsService {
             const days = eachDayOfInterval({ start: startDay, end: endDay });
             const daysFromToday = days.filter(day => day >= today);
             daysFromToday.forEach((day, dayIndex) => {
-              // Calculer l'index original dans le tableau complet pour déterminer si c'est le premier/dernier jour
+              // Calculer l'index original dans le tableau complet
               const originalIndex = days.indexOf(day);
               const isFirstDay = originalIndex === 0;
               const isLastDay = originalIndex === days.length - 1;
@@ -212,16 +330,25 @@ class NantesEventsService {
 
               // Premier jour : montrer l'heure de début
               if (isFirstDay) {
-                dayTimeDisplay = format(startInParis, 'HH:mm');
+                if (timing.ignoreHeure) {
+                  dayTimeDisplay = 'Toute la journée';
+                  dayIsAllDay = true;
+                } else {
+                  dayTimeDisplay = format(startInParis, 'HH:mm');
+                }
                 dayStart = startInParis;
-                // Pas d'heure de fin si l'événement continue
                 dayEnd = startOfDay(startInParis);
                 dayEnd.setHours(23, 59, 59);
               }
               // Dernier jour : montrer l'heure de fin
               else if (isLastDay) {
-                dayTimeDisplay = '00:00';
-                dayEndTimeDisplay = format(endInParis, 'HH:mm');
+                if (timing.ignoreHeure) {
+                  dayTimeDisplay = 'Toute la journée';
+                  dayIsAllDay = true;
+                } else {
+                  dayTimeDisplay = '00:00';
+                  dayEndTimeDisplay = format(endInParis, 'HH:mm');
+                }
                 dayStart = startOfDay(endInParis);
                 dayEnd = endInParis;
               }
@@ -235,7 +362,7 @@ class NantesEventsService {
               }
 
               formattedEvents.push({
-                id: `nantes_${event.uid}_${timingIndex}_${dayIndex}`,
+                id: `nantes_${idManif}_${timingIndex}_${dayIndex}`,
                 title,
                 time: dayTimeDisplay,
                 endTime: dayEndTimeDisplay,
@@ -246,28 +373,28 @@ class NantesEventsService {
                 date: day.toISOString(),
                 isAllDay: dayIsAllDay,
                 source: 'nantes',
-                type: typeLabels || null,
+                type: type || null,
                 organizer: organizer || null,
                 url: url || null,
-                image: imageUrl || null
+                image: image || null
               });
             });
           } else {
             // Événement sur un seul jour
-            const isAllDay = event['nm-ignorer-heure-debut'] && event['nm-ignorer-heure-fin'];
+            const isAllDay = timing.ignoreHeure;
             let timeDisplay, endTimeDisplay = null;
 
             if (isAllDay) {
               timeDisplay = 'Toute la journée';
             } else {
               timeDisplay = format(startInParis, 'HH:mm');
-              if (!event['nm-ignorer-heure-fin']) {
+              if (timing.heureFin) {
                 endTimeDisplay = format(endInParis, 'HH:mm');
               }
             }
 
             formattedEvents.push({
-              id: `nantes_${event.uid}_${timingIndex}`,
+              id: `nantes_${idManif}_${timingIndex}`,
               title,
               time: timeDisplay,
               endTime: endTimeDisplay,
@@ -278,10 +405,10 @@ class NantesEventsService {
               date: startDay.toISOString(),
               isAllDay,
               source: 'nantes',
-              type: typeLabels || null,
+              type: type || null,
               organizer: organizer || null,
               url: url || null,
-              image: imageUrl || null
+              image: image || null
             });
           }
         });
@@ -294,25 +421,11 @@ class NantesEventsService {
         return new Date(a.start) - new Date(b.start);
       });
 
-      // Filtrer par catégories si nécessaire
-      let filteredEvents = formattedEvents;
-      // If selectedCategories is explicitly an empty array, return no events (all categories deselected)
-      if (Array.isArray(selectedCategories) && selectedCategories.length === 0) {
-        filteredEvents = [];
-      } else if (selectedCategories && selectedCategories.length > 0) {
-        filteredEvents = formattedEvents.filter(event => {
-          if (!event.type) return false;
-          const eventTypes = event.type.split(',').map(t => t.trim());
-          return eventTypes.some(type => selectedCategories.includes(type));
-        });
-      }
-      // If selectedCategories is null/undefined, filteredEvents = formattedEvents (all events)
-
       // Mettre en cache
-      this.cache = filteredEvents;
+      this.cache = formattedEvents;
       this.cacheTimestamp = Date.now();
 
-      return filteredEvents;
+      return formattedEvents;
     } catch (error) {
       console.error('Error fetching Nantes events:', error);
       throw error;

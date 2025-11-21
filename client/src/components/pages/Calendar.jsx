@@ -458,7 +458,7 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
           </div>
         </div>
       )}
-      {showScrollTop && (
+      {showScrollTop && !selectedEvent && (
         <button 
           className="scroll-to-top-button" 
           onClick={scrollToTop}
