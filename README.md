@@ -1,6 +1,6 @@
 # Home Dashboard
 
-Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la météo, les événements du calendrier familial depuis Google Calendar, les données de consommation électrique depuis MyElectricalData, les départs de bus, le contrôle des lumières Philips Hue et les actualités.
+Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la météo, les événements du calendrier familial depuis Google Calendar, les concerts depuis PullRouge, les événements de Nantes Métropole, les données de consommation électrique depuis MyElectricalData, les départs de bus, le contrôle des lumières Philips Hue et les actualités.
 
 ## Fonctionnalités
 
@@ -18,6 +18,12 @@ Tableau de bord pour Raspberry Pi avec écran tactile de 7 pouces. Affiche la m�
   - Bouton de rafraîchissement manuel
   - Cliquer sur les événements pour voir les détails complets
   - Page calendrier complète avec tous les événements à venir
+  - **Événements PullRouge** : Scraping automatique des concerts depuis pullrouge.fr (actualisation horaire)
+  - **Événements Nantes Métropole** : Intégration avec l'API publique des événements de Nantes
+  - Filtres par source (Agenda familial, Événements Nantes, Concerts) et par catégorie
+  - Images des événements affichées dans la modale de détails
+  - Bouton de retour en haut de page dans la vue calendrier complète
+  - Indicateur de chargement avec messages de progression
 
 - **Widget Électricité** : Affiche la consommation électrique du compteur Linky
   - Consommation d'hier avec comparaison au jour précédent
@@ -357,12 +363,6 @@ docker-compose down -v
 
 ## Idées / TODO
 
-- **Widget Musique Spotify** : Afficher la musique en cours de lecture
-  - Intégration avec l'API Spotify
-  - Affichage de la piste actuelle, de l'artiste et de la pochette d'album
-  - Contrôle de lecture (play/pause, suivant/précédent)
-  - Widget discret sur la page d'accueil
-
 - **Carte du réseau local** : Visualisation des appareils connectés
   - Intégration avec la Freebox et/ou le routeur TP-Link
   - Affichage des appareils connectés au réseau local
@@ -370,8 +370,4 @@ docker-compose down -v
   - Appareils moins actifs affichés en noir & blanc
   - Vue d'ensemble de la consommation réseau de la maison
 
-- **Calendrier événements Nantes Métropole** : Ajout d'un calendrier public
-  - Intégration avec l'[API de l'agenda des événements de Nantes Métropole](https://www.data.gouv.fr/datasets/agenda-des-evenements-de-nantes-metropole/reuses_and_dataservices)
-  - Affichage des événements publics de la ville (expositions, conférences, spectacles, etc.)
-  - Filtrage par type d'événement
-  - Fusion avec le calendrier familial ou affichage séparé
+- **Utilitaires /outis basiques** comme un minuteur
