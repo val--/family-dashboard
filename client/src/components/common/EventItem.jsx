@@ -23,11 +23,13 @@ function EventItemComponent({ event, compact = false, onClick, isSelected = fals
   const colorScheme = getColorScheme(event.date);
   const isHoliday = isSchoolHoliday(event.date || event.start);
   const isNantesEvent = event.source === 'nantes';
+  const isPullrougeEvent = event.source === 'pullrouge';
 
   const baseClasses = compact ? 'event-item-compact' : 'event-item';
   const holidayClass = isHoliday ? 'event-holiday' : '';
   const selectedClass = isSelected ? 'event-item-selected' : '';
   const nantesClass = isNantesEvent ? 'event-nantes' : '';
+  const pullrougeClass = isPullrougeEvent ? 'event-pullrouge' : '';
 
   // Déterminer la couleur de bordure
   let borderColor = '#f1c40f'; // Jaune par défaut pour calendrier familial
@@ -38,11 +40,14 @@ function EventItemComponent({ event, compact = false, onClick, isSelected = fals
   } else if (isNantesEvent) {
     // Si événement Nantes sans catégorie, garder le rouge
     borderColor = '#e74c3c';
+  } else if (isPullrougeEvent) {
+    // Pour les événements PullRouge, utiliser le rose
+    borderColor = '#e91e63';
   }
 
   return (
     <div
-      className={`${baseClasses} ${holidayClass} ${selectedClass} ${nantesClass}`}
+      className={`${baseClasses} ${holidayClass} ${selectedClass} ${nantesClass} ${pullrougeClass}`}
       onClick={onClick}
       style={{
         '--event-border-color': borderColor,

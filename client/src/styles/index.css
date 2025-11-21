@@ -772,9 +772,14 @@ body.spotify-page #root {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
-  width: 100%;
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+  width: calc(100% + 40px);
   min-height: 40px;
   flex-wrap: nowrap;
+  box-sizing: border-box;
 }
 
 .back-button {
@@ -791,6 +796,7 @@ body.spotify-page #root {
   justify-content: flex-end;
   white-space: nowrap;
   flex-wrap: nowrap;
+  margin-left: auto;
 }
 
 .calendar-filter-item {
@@ -827,6 +833,7 @@ body.spotify-page #root {
 
 .calendar-filter-categories {
   position: relative;
+  flex-shrink: 0;
 }
 
 .calendar-filter-categories-toggle {
@@ -1266,6 +1273,15 @@ body.spotify-page #root {
   background: var(--event-border-color, #e74c3c);
 }
 
+/* PullRouge events styling */
+.event-pullrouge {
+  border-left-color: #e91e63;
+}
+
+.event-pullrouge::before {
+  background: var(--event-border-color, #e91e63);
+}
+
 .event-source-badge {
   display: inline-block;
   margin-left: 8px;
@@ -1627,7 +1643,11 @@ body.spotify-page #root {
 @media (max-width: 1024px) {
   .calendar-header {
     flex-wrap: nowrap;
-    padding: 12px 16px;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    width: calc(100% + 32px);
     gap: 12px;
   }
 
@@ -1650,8 +1670,8 @@ body.spotify-page #root {
   }
 
   .calendar-filters {
-    width: 100%;
-    justify-content: flex-start;
+    justify-content: flex-end;
+    margin-left: auto;
   }
 
   .calendar {
@@ -1694,6 +1714,14 @@ body.spotify-page #root {
 @media (max-width: 800px) {
   .calendar {
     padding: 12px;
+  }
+
+  .calendar-header {
+    margin-left: -12px;
+    margin-right: -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    width: calc(100% + 24px);
   }
 
   .calendar-title {
