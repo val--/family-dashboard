@@ -7,7 +7,7 @@ import { isSchoolHoliday, getDateTitle } from '../../utils';
 import { CALENDAR_TITLE } from '../../constants';
 import { EventItem, formatEventTime } from '../common/EventItem';
 
-function Calendar({ events, showGoogleEvents, showNantesEvents, onToggleGoogleEvents, onToggleNantesEvents, availableCategories = [], selectedCategories = null, onToggleCategory, onSetCategories }) {
+function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEvents, onToggleGoogleEvents, onToggleNantesEvents, onTogglePullrougeEvents, availableCategories = [], selectedCategories = null, onToggleCategory, onSetCategories }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const navigate = useNavigate();
@@ -77,6 +77,14 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, onToggleGoogleEv
                 onChange={onToggleNantesEvents}
               />
               <span className="calendar-filter-label">Événements Nantes</span>
+            </label>
+            <label className="calendar-filter-item">
+              <input
+                type="checkbox"
+                checked={showPullrougeEvents}
+                onChange={onTogglePullrougeEvents}
+              />
+              <span className="calendar-filter-label">Concerts</span>
             </label>
             {showNantesEvents && availableCategories.length > 0 && (
               <div className="calendar-filter-categories" ref={categoryFilterRef}>
@@ -161,17 +169,18 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, onToggleGoogleEv
                         />
                         {isSelected && (
                           <div className="event-modal-overlay" onClick={() => setSelectedEvent(null)}>
-                            <div className="event-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className={`event-modal ${event.image ? 'event-modal-with-image' : ''}`} onClick={(e) => e.stopPropagation()}>
                               <button className="event-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
-                              <div className="event-modal-header">
-                                <h2 className="event-modal-title">{event.title}</h2>
-                                {event.image && (
-                                  <div className="event-modal-image">
+                              {event.image ? (
+                                <div className="event-modal-layout">
+                                  <div className="event-modal-image-container">
                                     <img src={event.image} alt={event.title} />
                                   </div>
-                                )}
-                              </div>
-                              <div className="event-modal-content">
+                                  <div className="event-modal-content-container">
+                                    <div className="event-modal-header">
+                                      <h2 className="event-modal-title">{event.title}</h2>
+                                    </div>
+                                    <div className="event-modal-content">
                                 <div className="event-details-section">
                                   <div className="event-details-label">Horaires</div>
                                   <div className="event-details-value">
@@ -212,6 +221,12 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, onToggleGoogleEv
                                     <div className="event-details-value">{event.organizer}</div>
                                   </div>
                                 )}
+                                {event.source === 'pullrouge' && event.priceInfo && (
+                                  <div className="event-details-section">
+                                    <div className="event-details-label">Prix / Infos</div>
+                                    <div className="event-details-value">{event.priceInfo}</div>
+                                  </div>
+                                )}
                                        {event.source === 'nantes' && event.url && (
                                          <div className="event-details-section">
                                            <div className="event-details-label">Plus d'infos</div>
@@ -236,7 +251,88 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, onToggleGoogleEv
                                     <div className="event-details-value">Pendant les vacances scolaires !</div>
                                   </div>
                                 )}
-                              </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="event-modal-header">
+                                    <h2 className="event-modal-title">{event.title}</h2>
+                                  </div>
+                                  <div className="event-modal-content">
+                                    <div className="event-details-section">
+                                      <div className="event-details-label">Horaires</div>
+                                      <div className="event-details-value">
+                                        {event.isAllDay ? (
+                                          <span>Toute la journée</span>
+                                        ) : event.end ? (
+                                          <span>
+                                            {format(parseISO(event.start), 'HH:mm', { locale: fr })} – {format(parseISO(event.end), 'HH:mm', { locale: fr })}
+                                          </span>
+                                        ) : (
+                                          <span>
+                                            {format(parseISO(event.start), 'HH:mm', { locale: fr })}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {event.description && (
+                                      <div className="event-details-section">
+                                        <div className="event-details-label">Description</div>
+                                        <div className="event-details-value event-description-text">{event.description}</div>
+                                      </div>
+                                    )}
+                                    {event.location && (
+                                      <div className="event-details-section">
+                                        <div className="event-details-label">Lieu</div>
+                                        <div className="event-details-value">{event.location}</div>
+                                      </div>
+                                    )}
+                                    {event.source === 'nantes' && event.type && (
+                                      <div className="event-details-section">
+                                        <div className="event-details-label">Type</div>
+                                        <div className="event-details-value">{event.type}</div>
+                                      </div>
+                                    )}
+                                    {event.source === 'nantes' && event.organizer && (
+                                      <div className="event-details-section">
+                                        <div className="event-details-label">Organisateur</div>
+                                        <div className="event-details-value">{event.organizer}</div>
+                                      </div>
+                                    )}
+                                    {event.source === 'pullrouge' && event.priceInfo && (
+                                      <div className="event-details-section">
+                                        <div className="event-details-label">Prix / Infos</div>
+                                        <div className="event-details-value">{event.priceInfo}</div>
+                                      </div>
+                                    )}
+                                    {event.source === 'nantes' && event.url && (
+                                      <div className="event-details-section">
+                                        <div className="event-details-label">Plus d'infos</div>
+                                        <div className="event-details-value">
+                                          <div className="event-modal-qr">
+                                            <p className="event-modal-qr-label">Scanner pour plus d'informations :</p>
+                                            <div className="event-modal-qr-code">
+                                              <QRCodeSVG
+                                                value={event.url}
+                                                size={200}
+                                                level="M"
+                                                includeMargin={true}
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {isSchoolHoliday(event.date || event.start) && (
+                                      <div className="event-details-section event-details-notes">
+                                        <div className="event-details-label">Notes</div>
+                                        <div className="event-details-value">Pendant les vacances scolaires !</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         )}

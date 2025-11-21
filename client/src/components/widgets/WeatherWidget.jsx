@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { REFRESH_INTERVAL } from '../../constants';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useScreensaverContext } from '../../App';
+import { useScreensaverContext } from '../../contexts/ScreensaverContext';
 import HueCompactWidget from './HueCompactWidget';
 
 function WeatherWidget() {

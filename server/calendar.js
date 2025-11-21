@@ -5,6 +5,8 @@ const config = require('./config');
 const path = require('path');
 const fs = require('fs');
 
+const PULLROUGE_EVENTS_FILE = path.join(__dirname, '../data/pullrouge-events.json');
+
 class CalendarService {
   constructor() {
     this.auth = null;
@@ -36,6 +38,22 @@ class CalendarService {
     } catch (error) {
       console.error('Error initializing Google Calendar service:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Load PullRouge events from JSON file
+   */
+  loadPullRougeEvents() {
+    try {
+      if (!fs.existsSync(PULLROUGE_EVENTS_FILE)) {
+        return [];
+      }
+      const data = JSON.parse(fs.readFileSync(PULLROUGE_EVENTS_FILE, 'utf8'));
+      return data.events || [];
+    } catch (error) {
+      console.error('[Calendar] Error loading PullRouge events:', error);
+      return [];
     }
   }
 
@@ -82,11 +100,24 @@ class CalendarService {
       // Format and filter events
       const formattedEvents = this.formatEvents(allEvents, timezone);
       
+      // Load PullRouge events and merge them
+      const pullrougeEvents = this.loadPullRougeEvents();
+      
+      // Merge all events
+      const allFormattedEvents = [...formattedEvents, ...pullrougeEvents];
+      
+      // Sort by date and time
+      allFormattedEvents.sort((a, b) => {
+        const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
+        if (dateCompare !== 0) return dateCompare;
+        return new Date(a.start) - new Date(b.start);
+      });
+      
       // Limit to maxEvents if specified, otherwise return all
       if (config.maxEvents) {
-        return formattedEvents.slice(0, config.maxEvents);
+        return allFormattedEvents.slice(0, config.maxEvents);
       }
-      return formattedEvents;
+      return allFormattedEvents;
     } catch (error) {
       console.error('Error fetching calendar events:', error);
       throw error;

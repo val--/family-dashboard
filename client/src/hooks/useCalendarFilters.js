@@ -5,6 +5,7 @@ const STORAGE_KEY = 'calendarFilters';
 const defaultFilters = {
   showGoogleEvents: true,
   showNantesEvents: true,
+  showPullrougeEvents: false,
   nantesCategories: null // null = show all categories, [] = show none, [cat1, cat2] = show specific
 };
 
@@ -46,19 +47,16 @@ export function useCalendarFilters() {
     updateFilters({ ...filters, showNantesEvents: !filters.showNantesEvents });
   };
 
+  const togglePullrougeEvents = () => {
+    updateFilters({ ...filters, showPullrougeEvents: !filters.showPullrougeEvents });
+  };
+
   const setNantesCategories = (categories) => {
     // Always create a new object to ensure React detects the change
     // For arrays, create a new array reference
     // For null, keep it as is (primitive value)
     const newCategories = Array.isArray(categories) ? [...categories] : categories;
     const newFilters = { ...filters, nantesCategories: newCategories };
-    console.log('[useCalendarFilters] setNantesCategories called:', { 
-      old: filters.nantesCategories, 
-      new: newCategories,
-      oldType: typeof filters.nantesCategories,
-      newType: typeof newCategories,
-      isArray: Array.isArray(newCategories)
-    });
     updateFilters(newFilters);
   };
 
@@ -95,9 +93,11 @@ export function useCalendarFilters() {
     filters,
     showGoogleEvents: filters.showGoogleEvents,
     showNantesEvents: filters.showNantesEvents,
+    showPullrougeEvents: filters.showPullrougeEvents !== undefined ? filters.showPullrougeEvents : false,
     nantesCategories: filters.nantesCategories === undefined ? null : filters.nantesCategories,
     toggleGoogleEvents,
     toggleNantesEvents,
+    togglePullrougeEvents,
     setNantesCategories,
     toggleNantesCategory
   };

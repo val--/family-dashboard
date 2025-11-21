@@ -23,6 +23,9 @@ credentials/service-account.json
 # Dump files (may contain sensitive data)
 scripts/*-dump.json
 
+# Data files (cached/scraped data)
+data/
+
 # OS files
 .DS_Store
 .DS_Store?

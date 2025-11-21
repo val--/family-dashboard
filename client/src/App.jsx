@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
@@ -10,24 +10,18 @@ import Screensaver from './components/common/Screensaver';
 import { useScreensaver } from './hooks/useScreensaver';
 import { useSimpleDragScroll } from './hooks/useSimpleDragScroll';
 import { useCalendarFilters } from './hooks/useCalendarFilters';
+import { ScreensaverContext } from './contexts/ScreensaverContext';
 
 import { API_URL, REFRESH_INTERVAL, SCREENSAVER_IDLE_TIME } from './constants';
 
-// Contexte pour partager la fonction d'activation du screensaver
-const ScreensaverContext = createContext(null);
-
-export const useScreensaverContext = () => {
-  const context = useContext(ScreensaverContext);
-  return context;
-};
-
 function CalendarPage() {
   const [googleEvents, setGoogleEvents] = useState([]);
+  const [pullrougeEvents, setPullrougeEvents] = useState([]);
   const [nantesEvents, setNantesEvents] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { showGoogleEvents, showNantesEvents, nantesCategories, toggleGoogleEvents, toggleNantesEvents, toggleNantesCategory, setNantesCategories } = useCalendarFilters();
+  const { showGoogleEvents, showNantesEvents, showPullrougeEvents, nantesCategories, toggleGoogleEvents, toggleNantesEvents, togglePullrougeEvents, toggleNantesCategory, setNantesCategories } = useCalendarFilters();
   const appRef = useSimpleDragScroll('a, button, .event-item');
   const prevCategoriesRef = useRef();
   
@@ -40,12 +34,17 @@ function CalendarPage() {
     try {
       setError(null);
       
-      // Fetch Google Calendar events
+      // Fetch Google Calendar events (which includes PullRouge events merged by the server)
       const googleResponse = await fetch(API_URL);
       const googleData = await googleResponse.json();
       
       if (googleData.success) {
-        setGoogleEvents(googleData.events || []);
+        const allEvents = googleData.events || [];
+        // Separate Google Calendar events from PullRouge events
+        const googleOnlyEvents = allEvents.filter(event => !event.source || event.source !== 'pullrouge');
+        const pullrougeEvents = allEvents.filter(event => event.source === 'pullrouge');
+        setGoogleEvents(googleOnlyEvents);
+        setPullrougeEvents(pullrougeEvents);
       } else {
         throw new Error(googleData.message || 'Failed to fetch Google Calendar events');
       }
@@ -104,19 +103,10 @@ function CalendarPage() {
     const currentCategoriesStr = JSON.stringify(nantesCategories);
     const prevCategoriesStr = prevCategoriesRef.current;
     
-    console.log('[App] useEffect triggered:', {
-      current: nantesCategories,
-      currentStr: currentCategoriesStr,
-      prevStr: prevCategoriesStr,
-      showNantesEvents,
-      changed: currentCategoriesStr !== prevCategoriesStr
-    });
-    
     // Only refetch if categories actually changed
     if (currentCategoriesStr !== prevCategoriesStr) {
       prevCategoriesRef.current = currentCategoriesStr;
       if (showNantesEvents) {
-        console.log('[App] Fetching events with categories:', nantesCategories);
         fetchEvents();
       }
     }
@@ -126,6 +116,7 @@ function CalendarPage() {
   // Merge and filter events based on checkboxes
   const allEvents = [
     ...(showGoogleEvents ? googleEvents : []),
+    ...(showPullrougeEvents ? pullrougeEvents : []),
     ...(showNantesEvents ? nantesEvents : [])
   ].sort((a, b) => {
     // Sort by date first, then by start time
@@ -160,8 +151,10 @@ function CalendarPage() {
         events={allEvents} 
         showGoogleEvents={showGoogleEvents}
         showNantesEvents={showNantesEvents}
+        showPullrougeEvents={showPullrougeEvents}
         onToggleGoogleEvents={toggleGoogleEvents}
         onToggleNantesEvents={toggleNantesEvents}
+        onTogglePullrougeEvents={togglePullrougeEvents}
         availableCategories={availableCategories}
         selectedCategories={nantesCategories}
         onToggleCategory={toggleNantesCategory}

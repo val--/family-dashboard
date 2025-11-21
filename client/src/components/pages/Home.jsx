@@ -9,10 +9,11 @@ import { useCalendarFilters } from '../../hooks/useCalendarFilters';
 
 function Home() {
   const [googleEvents, setGoogleEvents] = useState([]);
+  const [pullrougeEvents, setPullrougeEvents] = useState([]);
   const [nantesEvents, setNantesEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { showGoogleEvents, showNantesEvents, nantesCategories } = useCalendarFilters();
+  const { showGoogleEvents, showNantesEvents, showPullrougeEvents, nantesCategories } = useCalendarFilters();
   
   const [electricityData, setElectricityData] = useState(null);
   const [electricityLoading, setElectricityLoading] = useState(true);
@@ -28,12 +29,17 @@ function Home() {
     try {
       setError(null);
       
-      // Fetch Google Calendar events
+      // Fetch Google Calendar events (which includes PullRouge events merged by the server)
       const googleResponse = await fetch(API_URL);
       const googleData = await googleResponse.json();
       
       if (googleData.success) {
-        setGoogleEvents(googleData.events || []);
+        const allEvents = googleData.events || [];
+        // Separate Google Calendar events from PullRouge events
+        const googleOnlyEvents = allEvents.filter(event => !event.source || event.source !== 'pullrouge');
+        const pullrougeEvents = allEvents.filter(event => event.source === 'pullrouge');
+        setGoogleEvents(googleOnlyEvents);
+        setPullrougeEvents(pullrougeEvents);
       } else {
         throw new Error(googleData.message || 'Failed to fetch Google Calendar events');
       }
@@ -64,54 +70,35 @@ function Home() {
   // Merge and filter events based on stored preferences
   // Use useMemo to recalculate when filters or events change
   const events = useMemo(() => {
-    // If both types are enabled, try to include at least some from each
+    // Merge all enabled event types
     let allEvents = [];
     
-    if (showGoogleEvents && showNantesEvents) {
-      // Sort each type separately first
-      const sortedGoogle = [...googleEvents].sort((a, b) => {
-        const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(a.start) - new Date(b.start);
-      });
-      
-      const sortedNantes = [...nantesEvents].sort((a, b) => {
-        const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(a.start) - new Date(b.start);
-      });
-      
-      // Merge all events from both types, then sort
-      allEvents = [...sortedGoogle, ...sortedNantes].sort((a, b) => {
-        const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(a.start) - new Date(b.start);
-      });
-      
-      // Limit to MAX_EVENTS_WIDGET only if we have too many events
-      if (allEvents.length > MAX_EVENTS_WIDGET) {
-        allEvents = allEvents.slice(0, MAX_EVENTS_WIDGET);
-      }
-    } else if (showGoogleEvents) {
-      // Only Google Calendar: show ALL events (up to 1 year, no limit in widget)
-      allEvents = [...googleEvents].sort((a, b) => {
-        const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(a.start) - new Date(b.start);
-      });
-      // No limit for Google Calendar events - show all
-    } else if (showNantesEvents) {
-      // Only Nantes events: show all (limited by API to 20)
-      allEvents = [...nantesEvents].sort((a, b) => {
-        const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
-        if (dateCompare !== 0) return dateCompare;
-        return new Date(a.start) - new Date(b.start);
-      });
-      // No limit for Nantes events - show all
+    if (showGoogleEvents) {
+      allEvents = [...allEvents, ...googleEvents];
+    }
+    
+    if (showPullrougeEvents) {
+      allEvents = [...allEvents, ...pullrougeEvents];
+    }
+    
+    if (showNantesEvents) {
+      allEvents = [...allEvents, ...nantesEvents];
+    }
+    
+    // Sort all events
+    allEvents.sort((a, b) => {
+      const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(a.start) - new Date(b.start);
+    });
+    
+    // Limit to MAX_EVENTS_WIDGET only if we have too many events
+    if (allEvents.length > MAX_EVENTS_WIDGET) {
+      allEvents = allEvents.slice(0, MAX_EVENTS_WIDGET);
     }
 
     return allEvents;
-  }, [showGoogleEvents, showNantesEvents, googleEvents, nantesEvents]);
+  }, [showGoogleEvents, showPullrougeEvents, showNantesEvents, googleEvents, pullrougeEvents, nantesEvents]);
 
   const fetchElectricity = async () => {
     try {
@@ -157,19 +144,10 @@ function Home() {
     const currentCategoriesStr = JSON.stringify(nantesCategories);
     const prevCategoriesStr = prevCategoriesRef.current;
     
-    console.log('[Home] useEffect triggered:', {
-      current: nantesCategories,
-      currentStr: currentCategoriesStr,
-      prevStr: prevCategoriesStr,
-      showNantesEvents,
-      changed: currentCategoriesStr !== prevCategoriesStr
-    });
-    
     // Only refetch if categories actually changed
     if (currentCategoriesStr !== prevCategoriesStr) {
       prevCategoriesRef.current = currentCategoriesStr;
       if (showNantesEvents) {
-        console.log('[Home] Fetching events with categories:', nantesCategories);
         fetchEvents();
       }
     }

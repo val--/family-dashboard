@@ -7,6 +7,7 @@ const path = require('path');
 const calendarService = require('./calendar');
 const electricityService = require('./electricity');
 const nantesEventsService = require('./nantes-events');
+const pullrougeService = require('./pullrouge');
 const weatherService = require('./weather');
 const newsService = require('./news');
 const busService = require('./bus');
@@ -69,6 +70,25 @@ app.get('/api/nantes-events/categories', async (req, res) => {
     console.error('Error in /api/nantes-events/categories:', error);
     res.status(500).json({ 
       error: 'Failed to fetch Nantes event categories', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+// PullRouge events API route
+app.get('/api/pullrouge-events', async (req, res) => {
+  try {
+    // Option to clear cache via query parameter
+    if (req.query.clearCache === 'true') {
+      pullrougeService.clearCache();
+    }
+    const events = await pullrougeService.getEvents();
+    res.json({ events, success: true });
+  } catch (error) {
+    console.error('Error in /api/pullrouge-events:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch PullRouge events', 
       message: error.message,
       success: false 
     });
@@ -771,6 +791,26 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
 }
+
+// Initialize PullRouge events refresh on startup and set up periodic refresh
+(async () => {
+  try {
+    console.log('[PullRouge] Initial refresh on startup...');
+    await pullrougeService.refreshEvents();
+  } catch (error) {
+    console.error('[PullRouge] Error during initial refresh:', error);
+  }
+})();
+
+// Set up periodic refresh every hour (3600000 ms)
+setInterval(async () => {
+  try {
+    console.log('[PullRouge] Periodic refresh...');
+    await pullrougeService.refreshEvents();
+  } catch (error) {
+    console.error('[PullRouge] Error during periodic refresh:', error);
+  }
+}, 60 * 60 * 1000); // 1 hour
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
