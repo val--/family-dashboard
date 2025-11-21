@@ -17,6 +17,15 @@ class ElectricityService {
     this.ERROR_LOG_INTERVAL = 5 * 60 * 1000; // Log 409 errors at most once every 5 minutes
   }
 
+  /**
+   * Clear the cache
+   */
+  clearCache() {
+    this.cache = null;
+    this.cacheTimestamp = null;
+    this.cacheDailyChartDays = null;
+  }
+
   async fetchFromAPI(endpoint, retries = 2) {
     try {
       const response = await axios.get(`${this.baseUrl}${endpoint}`, {

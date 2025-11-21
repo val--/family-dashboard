@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { REFRESH_INTERVAL } from '../../constants';
 
 /**
@@ -6,9 +7,11 @@ import { REFRESH_INTERVAL } from '../../constants';
  * Affiche un écran noir avec l'heure au centre
  */
 function Screensaver({ onExit }) {
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const shouldExitRef = useRef(false);
   const [weatherInfo, setWeatherInfo] = useState(null);
+  const [spotifyTrack, setSpotifyTrack] = useState(null);
 
   useEffect(() => {
     // Mettre à jour l'heure chaque seconde
@@ -62,11 +65,80 @@ function Screensaver({ onExit }) {
     }
   }, []);
 
+  const fetchSpotifyStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/spotify/status');
+      if (!response.ok) {
+        throw new Error('Spotify fetch failed');
+      }
+      const result = await response.json();
+      if (result.success && result.authenticated && result.track) {
+        setSpotifyTrack({
+          artist: result.track.artists,
+          name: result.track.name,
+          isPlaying: result.isPlaying || false,
+        });
+      } else {
+        setSpotifyTrack(null);
+      }
+    } catch (error) {
+      console.error('Erreur Spotify écran de veille:', error);
+      setSpotifyTrack(null);
+    }
+  }, []);
+
+  const handlePlayPause = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') {
+        e.stopImmediatePropagation();
+      }
+    }
+    if (!spotifyTrack) return;
+
+    const wasPlaying = spotifyTrack.isPlaying;
+    const endpoint = wasPlaying ? '/api/spotify/pause' : '/api/spotify/play';
+    
+    // Mettre à jour l'état local immédiatement pour un feedback visuel instantané
+    setSpotifyTrack(prev => prev ? { ...prev, isPlaying: !prev.isPlaying } : null);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      
+      if (!response.ok) {
+        // En cas d'erreur, restaurer l'état précédent
+        setSpotifyTrack(prev => prev ? { ...prev, isPlaying: wasPlaying } : null);
+        const data = await response.json();
+        console.error('Erreur lors du play/pause:', data.error || 'Unknown error');
+      } else {
+        // Rafraîchir le statut après un court délai pour s'assurer de la synchronisation
+        setTimeout(() => {
+          fetchSpotifyStatus();
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Erreur lors du play/pause:', error);
+      // En cas d'erreur, restaurer l'état précédent
+      setSpotifyTrack(prev => prev ? { ...prev, isPlaying: wasPlaying } : null);
+    }
+    return false;
+  };
+
   useEffect(() => {
     fetchWeather();
-    const interval = setInterval(fetchWeather, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchWeather]);
+    fetchSpotifyStatus();
+    const weatherInterval = setInterval(fetchWeather, REFRESH_INTERVAL);
+    const spotifyInterval = setInterval(fetchSpotifyStatus, 5000); // Rafraîchir Spotify toutes les 5 secondes
+    return () => {
+      clearInterval(weatherInterval);
+      clearInterval(spotifyInterval);
+    };
+  }, [fetchWeather, fetchSpotifyStatus]);
 
   useEffect(() => {
     const stopEvent = (event) => {
@@ -78,13 +150,27 @@ function Screensaver({ onExit }) {
       return false;
     };
 
+    // Vérifier si le clic provient d'un élément interactif (play/pause ou texte Spotify)
+    const isInteractiveElement = (target) => {
+      return target.closest('.screensaver-spotify-play-pause') || 
+             target.closest('.screensaver-spotify-text');
+    };
+
     const handlePointerDownCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       shouldExitRef.current = true;
       return false;
     };
 
     const handlePointerUpCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       if (shouldExitRef.current) {
         shouldExitRef.current = false;
@@ -99,17 +185,29 @@ function Screensaver({ onExit }) {
     };
 
     const handleClickCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       return false;
     };
 
     const handleMouseDownCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       shouldExitRef.current = true;
       return false;
     };
 
     const handleMouseUpCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       if (shouldExitRef.current) {
         shouldExitRef.current = false;
@@ -123,12 +221,20 @@ function Screensaver({ onExit }) {
     };
 
     const handleTouchStartCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       shouldExitRef.current = true;
       return false;
     };
 
     const handleTouchEndCapture = (event) => {
+      // Ne pas intercepter les clics sur les éléments interactifs
+      if (isInteractiveElement(event.target)) {
+        return;
+      }
       stopEvent(event);
       if (shouldExitRef.current) {
         shouldExitRef.current = false;
@@ -195,6 +301,51 @@ function Screensaver({ onExit }) {
               {Math.round(weatherInfo.temp)}°
             </span>
           </div>
+        </div>
+      )}
+      {spotifyTrack && (
+        <div 
+          className="screensaver-spotify screensaver-spotify-clickable" 
+          aria-live="polite"
+        >
+          <svg 
+            className="screensaver-spotify-icon screensaver-spotify-play-pause" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="currentColor"
+            onClick={handlePlayPause}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              if (typeof e.stopImmediatePropagation === 'function') {
+                e.stopImmediatePropagation();
+              }
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (typeof e.stopImmediatePropagation === 'function') {
+                e.stopImmediatePropagation();
+              }
+            }}
+          >
+            {spotifyTrack.isPlaying ? (
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            ) : (
+              <path d="M8 5v14l11-7z"/>
+            )}
+          </svg>
+          <span 
+            className="screensaver-spotify-text"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onExit) {
+                onExit();
+              }
+              navigate('/spotify');
+            }}
+          >
+            {spotifyTrack.artist} - {spotifyTrack.name}
+          </span>
         </div>
       )}
     </div>

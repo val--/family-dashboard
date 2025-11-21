@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
@@ -9,6 +9,7 @@ import SpotifyPage from './components/pages/SpotifyPage';
 import Screensaver from './components/common/Screensaver';
 import { useScreensaver } from './hooks/useScreensaver';
 import { useSimpleDragScroll } from './hooks/useSimpleDragScroll';
+import { useCalendarFilters } from './hooks/useCalendarFilters';
 
 import { API_URL, REFRESH_INTERVAL, SCREENSAVER_IDLE_TIME } from './constants';
 
@@ -21,21 +22,47 @@ export const useScreensaverContext = () => {
 };
 
 function CalendarPage() {
-  const [events, setEvents] = useState([]);
+  const [googleEvents, setGoogleEvents] = useState([]);
+  const [nantesEvents, setNantesEvents] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { showGoogleEvents, showNantesEvents, nantesCategories, toggleGoogleEvents, toggleNantesEvents, toggleNantesCategory, setNantesCategories } = useCalendarFilters();
   const appRef = useSimpleDragScroll('a, button, .event-item');
+  const prevCategoriesRef = useRef();
+  
+  // Initialize ref on mount
+  useEffect(() => {
+    prevCategoriesRef.current = JSON.stringify(nantesCategories);
+  }, []);
 
   const fetchEvents = async () => {
     try {
       setError(null);
-      const response = await fetch(API_URL);
-      const data = await response.json();
       
-      if (data.success) {
-        setEvents(data.events || []);
+      // Fetch Google Calendar events
+      const googleResponse = await fetch(API_URL);
+      const googleData = await googleResponse.json();
+      
+      if (googleData.success) {
+        setGoogleEvents(googleData.events || []);
       } else {
-        throw new Error(data.message || 'Failed to fetch events');
+        throw new Error(googleData.message || 'Failed to fetch Google Calendar events');
+      }
+
+      // Fetch Nantes events with category filter
+      // null = show all, [] = show none, [cat1, cat2] = show specific
+      const categoriesParam = nantesCategories === null 
+        ? '' // null = no filter, show all
+        : `?categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
+      const nantesResponse = await fetch(`/api/nantes-events${categoriesParam}`);
+      const nantesData = await nantesResponse.json();
+      
+      if (nantesData.success) {
+        setNantesEvents(nantesData.events || []);
+      } else {
+        console.warn('Failed to fetch Nantes events:', nantesData.message);
+        setNantesEvents([]);
       }
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -45,7 +72,22 @@ function CalendarPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/nantes-events/categories');
+      const data = await response.json();
+      if (data.success) {
+        setAvailableCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
   useEffect(() => {
+    // Fetch categories on mount
+    fetchCategories();
+    
     // Fetch immediately on mount
     fetchEvents();
 
@@ -57,20 +99,56 @@ function CalendarPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Refetch events when category filter changes
+  useEffect(() => {
+    const currentCategoriesStr = JSON.stringify(nantesCategories);
+    const prevCategoriesStr = prevCategoriesRef.current;
+    
+    console.log('[App] useEffect triggered:', {
+      current: nantesCategories,
+      currentStr: currentCategoriesStr,
+      prevStr: prevCategoriesStr,
+      showNantesEvents,
+      changed: currentCategoriesStr !== prevCategoriesStr
+    });
+    
+    // Only refetch if categories actually changed
+    if (currentCategoriesStr !== prevCategoriesStr) {
+      prevCategoriesRef.current = currentCategoriesStr;
+      if (showNantesEvents) {
+        console.log('[App] Fetching events with categories:', nantesCategories);
+        fetchEvents();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nantesCategories, showNantesEvents]);
+
+  // Merge and filter events based on checkboxes
+  const allEvents = [
+    ...(showGoogleEvents ? googleEvents : []),
+    ...(showNantesEvents ? nantesEvents : [])
+  ].sort((a, b) => {
+    // Sort by date first, then by start time
+    const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
+    if (dateCompare !== 0) return dateCompare;
+    return new Date(a.start) - new Date(b.start);
+  });
+
   if (loading) {
     return (
-      <div className="app">
-        <div className="loading">Chargement...</div>
+      <div className="app" ref={appRef}>
+        <div className="calendar">
+          <div className="calendar-loading">Chargement...</div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="app">
-        <div className="error">
-          <h2>Erreur</h2>
-          <p>{error}</p>
+      <div className="app" ref={appRef}>
+        <div className="calendar">
+          <div className="calendar-error">{error}</div>
         </div>
       </div>
     );
@@ -78,7 +156,17 @@ function CalendarPage() {
 
   return (
     <div className="app" ref={appRef}>
-      <Calendar events={events} />
+      <Calendar 
+        events={allEvents} 
+        showGoogleEvents={showGoogleEvents}
+        showNantesEvents={showNantesEvents}
+        onToggleGoogleEvents={toggleGoogleEvents}
+        onToggleNantesEvents={toggleNantesEvents}
+        availableCategories={availableCategories}
+        selectedCategories={nantesCategories}
+        onToggleCategory={toggleNantesCategory}
+        onSetCategories={setNantesCategories}
+      />
     </div>
   );
 }

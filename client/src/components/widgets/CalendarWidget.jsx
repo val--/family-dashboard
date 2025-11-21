@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { parseISO, startOfDay } from 'date-fns';
+import { parseISO, startOfDay, format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
 import { CALENDAR_TITLE, MAX_DATES_WIDGET, MAX_EVENTS_PER_DATE_WIDGET } from '../../constants';
-import { getDateTitle } from '../../utils';
+import { getDateTitle, isSchoolHoliday } from '../../utils';
 import { EventItem } from '../common/EventItem';
 
 function CalendarWidget({ events, loading, error, onRefresh }) {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
-  const handleClick = () => {
+  const handleHeaderClick = () => {
     navigate('/calendar');
   };
 
@@ -27,7 +30,7 @@ function CalendarWidget({ events, loading, error, onRefresh }) {
   };
 
   const renderHeader = () => (
-    <div className="calendar-widget-header">
+    <div className="calendar-widget-header" onClick={handleHeaderClick} style={{ cursor: 'pointer' }}>
       <h2 className="calendar-widget-title">{CALENDAR_TITLE}</h2>
       {onRefresh && (
         <button
@@ -58,7 +61,7 @@ function CalendarWidget({ events, loading, error, onRefresh }) {
 
   if (loading) {
     return (
-      <div className="calendar-widget" onClick={handleClick}>
+      <div className="calendar-widget">
         {renderHeader()}
         <div className="calendar-widget-content">
           <div className="calendar-widget-loading">Chargement...</div>
@@ -69,7 +72,7 @@ function CalendarWidget({ events, loading, error, onRefresh }) {
 
   if (error) {
     return (
-      <div className="calendar-widget" onClick={handleClick}>
+      <div className="calendar-widget">
         {renderHeader()}
         <div className="calendar-widget-content">
           <div className="calendar-widget-error">{error}</div>
@@ -80,7 +83,7 @@ function CalendarWidget({ events, loading, error, onRefresh }) {
 
   if (!events || events.length === 0) {
     return (
-      <div className="calendar-widget" onClick={handleClick}>
+      <div className="calendar-widget">
         {renderHeader()}
         <div className="calendar-widget-content">
           <div className="calendar-widget-empty">Aucun événement à venir</div>
@@ -101,8 +104,16 @@ function CalendarWidget({ events, loading, error, onRefresh }) {
 
   const sortedDateKeys = Object.keys(eventsByDate).sort().slice(0, MAX_DATES_WIDGET);
 
+  const handleSeeMore = (e) => {
+    e.stopPropagation();
+    navigate('/calendar');
+  };
+
+  // Find the selected event object
+  const selectedEventObj = selectedEvent ? events.find(e => e.id === selectedEvent) : null;
+
   return (
-    <div className="calendar-widget" onClick={handleClick}>
+    <div className="calendar-widget">
       {renderHeader()}
       <div className="calendar-widget-content">
         {sortedDateKeys.map((dateKey) => {
@@ -113,16 +124,113 @@ function CalendarWidget({ events, loading, error, onRefresh }) {
             <div key={dateKey} className="calendar-widget-date-section">
               <h3 className="calendar-widget-date-title">{dateTitle}</h3>
               <ul className="events-list events-list-compact">
-                {dateEvents.slice(0, MAX_EVENTS_PER_DATE_WIDGET).map((event) => (
-                  <li key={event.id}>
-                    <EventItem event={event} compact={true} />
-                  </li>
-                ))}
+                {dateEvents.map((event) => {
+                  const isSelected = selectedEvent === event.id;
+                  return (
+                    <li key={event.id}>
+                      <EventItem 
+                        event={event} 
+                        compact={true}
+                        isSelected={isSelected}
+                        onClick={() => setSelectedEvent(isSelected ? null : event.id)}
+                      />
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );
         })}
       </div>
+      <div className="calendar-widget-footer">
+        <button 
+          className="calendar-widget-see-more" 
+          onClick={handleSeeMore}
+        >
+          Voir plus
+        </button>
+      </div>
+      {selectedEventObj && (
+        <div className="event-modal-overlay" onClick={() => setSelectedEvent(null)}>
+          <div className="event-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="event-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
+            <div className="event-modal-header">
+              <h2 className="event-modal-title">{selectedEventObj.title}</h2>
+              {selectedEventObj.image && (
+                <div className="event-modal-image">
+                  <img src={selectedEventObj.image} alt={selectedEventObj.title} />
+                </div>
+              )}
+            </div>
+            <div className="event-modal-content">
+              <div className="event-details-section">
+                <div className="event-details-label">Horaires</div>
+                <div className="event-details-value">
+                  {selectedEventObj.isAllDay ? (
+                    <span>Toute la journée</span>
+                  ) : selectedEventObj.end ? (
+                    <span>
+                      {format(parseISO(selectedEventObj.start), 'HH:mm', { locale: fr })} – {format(parseISO(selectedEventObj.end), 'HH:mm', { locale: fr })}
+                    </span>
+                  ) : (
+                    <span>
+                      {format(parseISO(selectedEventObj.start), 'HH:mm', { locale: fr })}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {selectedEventObj.description && (
+                <div className="event-details-section">
+                  <div className="event-details-label">Description</div>
+                  <div className="event-details-value event-description-text">{selectedEventObj.description}</div>
+                </div>
+              )}
+              {selectedEventObj.location && (
+                <div className="event-details-section">
+                  <div className="event-details-label">Lieu</div>
+                  <div className="event-details-value">{selectedEventObj.location}</div>
+                </div>
+              )}
+              {selectedEventObj.source === 'nantes' && selectedEventObj.type && (
+                <div className="event-details-section">
+                  <div className="event-details-label">Type</div>
+                  <div className="event-details-value">{selectedEventObj.type}</div>
+                </div>
+              )}
+              {selectedEventObj.source === 'nantes' && selectedEventObj.organizer && (
+                <div className="event-details-section">
+                  <div className="event-details-label">Organisateur</div>
+                  <div className="event-details-value">{selectedEventObj.organizer}</div>
+                </div>
+              )}
+              {selectedEventObj.source === 'nantes' && selectedEventObj.url && (
+                <div className="event-details-section">
+                  <div className="event-details-label">Plus d'infos</div>
+                  <div className="event-details-value">
+                    <div className="event-modal-qr">
+                      <p className="event-modal-qr-label">Scanner pour plus d'informations :</p>
+                      <div className="event-modal-qr-code">
+                        <QRCodeSVG
+                          value={selectedEventObj.url}
+                          size={200}
+                          level="M"
+                          includeMargin={true}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {isSchoolHoliday(selectedEventObj.date || selectedEventObj.start) && (
+                <div className="event-details-section event-details-notes">
+                  <div className="event-details-label">Notes</div>
+                  <div className="event-details-value">Pendant les vacances scolaires !</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

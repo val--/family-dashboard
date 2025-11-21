@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const calendarService = require('./calendar');
 const electricityService = require('./electricity');
+const nantesEventsService = require('./nantes-events');
 const weatherService = require('./weather');
 const newsService = require('./news');
 const busService = require('./bus');
@@ -39,9 +40,48 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
+// Nantes events API route
+app.get('/api/nantes-events', async (req, res) => {
+  try {
+    // Parse selected categories from query parameter
+    const selectedCategories = req.query.categories 
+      ? JSON.parse(decodeURIComponent(req.query.categories))
+      : null;
+    
+    const events = await nantesEventsService.getEvents(selectedCategories);
+    res.json({ events, success: true });
+  } catch (error) {
+    console.error('Error in /api/nantes-events:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Nantes events', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
+// Nantes events categories API route
+app.get('/api/nantes-events/categories', async (req, res) => {
+  try {
+    const categories = await nantesEventsService.getAvailableCategories();
+    res.json({ categories, success: true });
+  } catch (error) {
+    console.error('Error in /api/nantes-events/categories:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Nantes event categories', 
+      message: error.message,
+      success: false 
+    });
+  }
+});
+
 // Electricity API route
 app.get('/api/electricity', async (req, res) => {
   try {
+    // Option to clear cache via query parameter
+    if (req.query.clearCache === 'true') {
+      electricityService.clearCache();
+    }
     const dailyChartDays = req.query.dailyChartDays ? parseInt(req.query.dailyChartDays, 10) : 7;
     const data = await electricityService.getWidgetData(dailyChartDays);
     res.json({ data, success: true });

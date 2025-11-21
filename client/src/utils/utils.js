@@ -53,3 +53,43 @@ export const getEventColor = (dateISO) => {
   return scheme.border;
 };
 
+/**
+ * Generate a consistent color for a category name
+ */
+export const getCategoryColor = (categoryName) => {
+  if (!categoryName) return '#3498db'; // Default blue
+  
+  // Simple hash function to convert category name to a number
+  let hash = 0;
+  for (let i = 0; i < categoryName.length; i++) {
+    hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Palette of distinct colors
+  const colors = [
+    '#3498db', // Blue
+    '#2ecc71', // Green
+    '#e74c3c', // Red
+    '#f39c12', // Orange
+    '#9b59b6', // Purple
+    '#1abc9c', // Turquoise
+    '#e67e22', // Dark Orange
+    '#16a085', // Dark Turquoise
+    '#c0392b', // Dark Red
+    '#8e44ad', // Dark Purple
+    '#27ae60', // Dark Green
+    '#2980b9', // Dark Blue
+    '#d35400', // Very Dark Orange
+    '#7f8c8d', // Gray
+    '#34495e', // Dark Gray
+    '#f1c40f', // Yellow
+    '#e91e63', // Pink
+    '#00bcd4', // Cyan
+    '#4caf50', // Light Green
+    '#ff9800', // Amber
+  ];
+  
+  // Use absolute value of hash to get index
+  return colors[Math.abs(hash) % colors.length];
+};
+

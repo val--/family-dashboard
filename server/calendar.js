@@ -57,21 +57,30 @@ class CalendarService {
       const endDate = addDays(startOfToday, 360);
       const endTime = zonedTimeToUtc(endDate, timezone).toISOString();
 
-      // Fetch events from main calendar
-      const response = await this.calendar.events.list({
-        calendarId: config.calendarId,
-        timeMin: startTime,
-        timeMax: endTime,
-        singleEvents: true,
-        orderBy: 'startTime',
-        maxResults: 250,
-        showDeleted: false
-      });
+      // Fetch events from main calendar with pagination to get all events
+      let allEvents = [];
+      let pageToken = null;
+      
+      do {
+        const response = await this.calendar.events.list({
+          calendarId: config.calendarId,
+          timeMin: startTime,
+          timeMax: endTime,
+          singleEvents: true,
+          orderBy: 'startTime',
+          maxResults: 2500, // Maximum allowed by Google Calendar API
+          pageToken: pageToken,
+          showDeleted: false
+        });
 
-      const events = response.data.items || [];
+        const events = response.data.items || [];
+        allEvents = allEvents.concat(events);
+        
+        pageToken = response.data.nextPageToken || null;
+      } while (pageToken);
       
       // Format and filter events
-      const formattedEvents = this.formatEvents(events, timezone);
+      const formattedEvents = this.formatEvents(allEvents, timezone);
       
       // Limit to maxEvents if specified, otherwise return all
       if (config.maxEvents) {
@@ -147,16 +156,21 @@ class CalendarService {
         
         const spansMultipleDays = !isSameDay(startDay, actualEndDay);
 
-        // If event spans multiple days, create entries for each day
+        // If event spans multiple days, create entries for each day, but only from today onwards
         if (spansMultipleDays) {
           const days = eachDayOfInterval({ start: startDay, end: actualEndDay });
-          return days.map((day, index) => {
+          const daysFromToday = days.filter(day => day >= startOfToday);
+          return daysFromToday.map((day, index) => {
+            // Calculate original index in full array to determine if it's first/last day
+            const originalIndex = days.indexOf(day);
+            const isFirstDay = originalIndex === 0;
+            const isLastDay = originalIndex === days.length - 1;
             let dayTimeDisplay;
             let dayEndTimeDisplay = null;
             let dayIsAllDay = false;
 
             // First day: show start time
-            if (index === 0) {
+            if (isFirstDay) {
               if (isAllDay) {
                 dayTimeDisplay = 'Toute la journée';
                 dayIsAllDay = true;
@@ -166,7 +180,7 @@ class CalendarService {
               }
             }
             // Last day: show end time
-            else if (index === days.length - 1) {
+            else if (isLastDay) {
               if (isAllDay) {
                 dayTimeDisplay = 'Toute la journée';
                 dayIsAllDay = true;

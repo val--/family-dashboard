@@ -82,6 +82,7 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
                   const height = maxValue > 0 ? (day.value / maxValue) * 100 : 0;
                   const isToday = index === chartData.length - 1;
                   
+                  
                   return (
                     <div key={day.date} className="electricity-chart-bar-container">
                       <div className="electricity-chart-bar-wrapper">
