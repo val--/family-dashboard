@@ -29,6 +29,7 @@ function SpotifyWidget() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
   const [shuffleState, setShuffleState] = useState(false);
+  const [showEnlargedCover, setShowEnlargedCover] = useState(false);
 
   // Vérifier l'authentification et récupérer le statut
   const fetchStatus = useCallback(async () => {
@@ -648,10 +649,14 @@ function SpotifyWidget() {
     // Afficher le dernier morceau joué avec les contrôles
     return (
       <React.Fragment>
-        <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
+        <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''} ${showEnlargedCover ? 'spotify-widget-cover-enlarged' : ''}`}>
           <div className="spotify-widget-content">
             {displayTrack.albumArt && (
-              <div className="spotify-widget-album-art">
+              <div 
+                className="spotify-widget-album-art spotify-widget-album-art-clickable"
+                onClick={() => setShowEnlargedCover(true)}
+                style={{ cursor: 'pointer' }}
+              >
                 <img src={displayTrack.albumArt} alt={displayTrack.album} />
               </div>
             )}
@@ -835,6 +840,25 @@ function SpotifyWidget() {
           </div>
         </div>
       )}
+
+      {/* Overlay pour la pochette agrandie */}
+      {showEnlargedCover && displayTrack?.albumArt && (
+        <div 
+          className="spotify-widget-enlarged-cover-overlay"
+          onClick={() => setShowEnlargedCover(false)}
+        >
+          <div 
+            className="spotify-widget-enlarged-cover-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={displayTrack.albumArt} 
+              alt={displayTrack.album} 
+              className="spotify-widget-enlarged-cover-image"
+            />
+          </div>
+        </div>
+      )}
     </div>
     </React.Fragment>
     );
@@ -842,7 +866,7 @@ function SpotifyWidget() {
 
   return (
     <React.Fragment>
-    <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''}`}>
+    <div className={`spotify-widget ${isTransitioning ? 'spotify-widget-transitioning' : ''} ${showEnlargedCover ? 'spotify-widget-cover-enlarged' : ''}`}>
       {/* Sélecteur d'utilisateur */}
       {currentUser && (
         <div className="spotify-widget-user-selector">
@@ -860,7 +884,11 @@ function SpotifyWidget() {
       )}
       <div className="spotify-widget-content">
         {track.albumArt && (
-          <div className="spotify-widget-album-art">
+          <div 
+            className="spotify-widget-album-art spotify-widget-album-art-clickable"
+            onClick={() => setShowEnlargedCover(true)}
+            style={{ cursor: 'pointer' }}
+          >
             <img src={track.albumArt} alt={track.album} />
           </div>
         )}
@@ -1045,6 +1073,25 @@ function SpotifyWidget() {
               />
               <div className="spotify-widget-volume-modal-value">{volume}%</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay pour la pochette agrandie */}
+      {showEnlargedCover && track?.albumArt && (
+        <div 
+          className="spotify-widget-enlarged-cover-overlay"
+          onClick={() => setShowEnlargedCover(false)}
+        >
+          <div 
+            className="spotify-widget-enlarged-cover-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={track.albumArt} 
+              alt={track.album} 
+              className="spotify-widget-enlarged-cover-image"
+            />
           </div>
         </div>
       )}

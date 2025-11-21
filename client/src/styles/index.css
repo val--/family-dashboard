@@ -4478,6 +4478,10 @@ body.spotify-page #root {
   transform: scale(1.02);
 }
 
+.spotify-widget-album-art-clickable {
+  cursor: pointer;
+}
+
 .spotify-widget-album-art img {
   width: 100%;
   height: 100%;
@@ -4602,6 +4606,75 @@ body.spotify-page #root {
   opacity: 0.6;
   filter: grayscale(30%);
   transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Fade-out des éléments quand la pochette est agrandie */
+.spotify-widget-cover-enlarged .spotify-widget-content > *:not(.spotify-widget-album-art),
+.spotify-widget-cover-enlarged .spotify-widget-controls,
+.spotify-widget-cover-enlarged .spotify-widget-info,
+.spotify-widget-cover-enlarged .spotify-widget-device-selector,
+.spotify-widget-cover-enlarged .spotify-widget-playlists-button,
+.spotify-widget-cover-enlarged .spotify-widget-volume-icon-button,
+.spotify-widget-cover-enlarged .spotify-widget-shuffle-button,
+.spotify-widget-cover-enlarged .spotify-widget-user-selector {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* Overlay pour la pochette agrandie */
+.spotify-widget-enlarged-cover-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease;
+  cursor: pointer;
+}
+
+.spotify-widget-enlarged-cover-content {
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: scaleIn 0.3s ease;
+}
+
+.spotify-widget-enlarged-cover-image {
+  width: auto;
+  height: auto;
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 25px 100px rgba(0, 0, 0, 0.8);
+  object-fit: contain;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .spotify-widget-control-button:disabled {

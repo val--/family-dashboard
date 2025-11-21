@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
 import Electricity from './components/pages/Electricity';
 import Weather from './components/pages/Weather';
 import Hue from './components/pages/Hue';
-import HomePage2 from './components/pages/HomePage2';
+import SpotifyPage from './components/pages/SpotifyPage';
 import Screensaver from './components/common/Screensaver';
 import { useScreensaver } from './hooks/useScreensaver';
+import { useSimpleDragScroll } from './hooks/useSimpleDragScroll';
 
 import { API_URL, REFRESH_INTERVAL, SCREENSAVER_IDLE_TIME } from './constants';
 
@@ -23,54 +24,7 @@ function CalendarPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const appRef = useRef(null);
-  const navigate = useNavigate();
-
-  // Enable drag-to-scroll - simplified approach
-  useEffect(() => {
-    const container = appRef.current;
-    if (!container) return;
-
-    // Only handle mouse drag, let native touch scrolling work
-    let isDragging = false;
-    let startY = 0;
-    let startScrollTop = 0;
-
-    const onMouseDown = (e) => {
-      if (e.target.closest('a, button, .event-item')) return;
-      isDragging = true;
-      startY = e.clientY;
-      startScrollTop = container.scrollTop;
-      container.style.cursor = 'grabbing';
-      container.style.userSelect = 'none';
-      e.preventDefault();
-    };
-
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-      const deltaY = e.clientY - startY;
-      container.scrollTop = startScrollTop - deltaY;
-      e.preventDefault();
-    };
-
-    const onMouseUp = () => {
-      if (isDragging) {
-        isDragging = false;
-        container.style.cursor = '';
-        container.style.userSelect = '';
-      }
-    };
-
-    container.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, []);
+  const appRef = useSimpleDragScroll('a, button, .event-item');
 
   const fetchEvents = async () => {
     try {
@@ -133,54 +87,7 @@ function ElectricityPage() {
   const [electricityData, setElectricityData] = useState(null);
   const [electricityLoading, setElectricityLoading] = useState(true);
   const [electricityError, setElectricityError] = useState(null);
-  const appRef = useRef(null);
-  const navigate = useNavigate();
-
-  // Enable drag-to-scroll - simplified approach
-  useEffect(() => {
-    const container = appRef.current;
-    if (!container) return;
-
-    // Only handle mouse drag, let native touch scrolling work
-    let isDragging = false;
-    let startY = 0;
-    let startScrollTop = 0;
-
-    const onMouseDown = (e) => {
-      if (e.target.closest('a, button, .electricity-stat-card')) return;
-      isDragging = true;
-      startY = e.clientY;
-      startScrollTop = container.scrollTop;
-      container.style.cursor = 'grabbing';
-      container.style.userSelect = 'none';
-      e.preventDefault();
-    };
-
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-      const deltaY = e.clientY - startY;
-      container.scrollTop = startScrollTop - deltaY;
-      e.preventDefault();
-    };
-
-    const onMouseUp = () => {
-      if (isDragging) {
-        isDragging = false;
-        container.style.cursor = '';
-        container.style.userSelect = '';
-      }
-    };
-
-    container.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, []);
+  const appRef = useSimpleDragScroll('a, button, .electricity-stat-card');
 
   const fetchElectricity = async () => {
     try {
@@ -244,54 +151,7 @@ function WeatherPage() {
   const [weatherData, setWeatherData] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState(null);
-  const appRef = useRef(null);
-  const navigate = useNavigate();
-
-  // Enable drag-to-scroll - simplified approach
-  useEffect(() => {
-    const container = appRef.current;
-    if (!container) return;
-
-    // Only handle mouse drag, let native touch scrolling work
-    let isDragging = false;
-    let startY = 0;
-    let startScrollTop = 0;
-
-    const onMouseDown = (e) => {
-      if (e.target.closest('a, button, .weather-page-hourly-item')) return;
-      isDragging = true;
-      startY = e.clientY;
-      startScrollTop = container.scrollTop;
-      container.style.cursor = 'grabbing';
-      container.style.userSelect = 'none';
-      e.preventDefault();
-    };
-
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-      const deltaY = e.clientY - startY;
-      container.scrollTop = startScrollTop - deltaY;
-      e.preventDefault();
-    };
-
-    const onMouseUp = () => {
-      if (isDragging) {
-        isDragging = false;
-        container.style.cursor = '';
-        container.style.userSelect = '';
-      }
-    };
-
-    container.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, []);
+  const appRef = useSimpleDragScroll('a, button, .weather-page-hourly-item');
 
   const fetchWeather = async () => {
     try {
@@ -332,54 +192,8 @@ function WeatherPage() {
 }
 
 function HuePage() {
-  const appRef = useRef(null);
+  const appRef = useSimpleDragScroll('a, button, .hue-light-item, .hue-brightness-slider');
   const navigate = useNavigate();
-
-  // Enable drag-to-scroll - simplified approach
-  useEffect(() => {
-    const container = appRef.current;
-    if (!container) return;
-
-    // Only handle mouse drag, let native touch scrolling work
-    let isDragging = false;
-    let startY = 0;
-    let startScrollTop = 0;
-
-    const onMouseDown = (e) => {
-      if (e.target.closest('a, button, .hue-light-item, .hue-brightness-slider')) return;
-      isDragging = true;
-      startY = e.clientY;
-      startScrollTop = container.scrollTop;
-      container.style.cursor = 'grabbing';
-      container.style.userSelect = 'none';
-      e.preventDefault();
-    };
-
-    const onMouseMove = (e) => {
-      if (!isDragging) return;
-      const deltaY = e.clientY - startY;
-      container.scrollTop = startScrollTop - deltaY;
-      e.preventDefault();
-    };
-
-    const onMouseUp = () => {
-      if (isDragging) {
-        isDragging = false;
-        container.style.cursor = '';
-        container.style.userSelect = '';
-      }
-    };
-
-    container.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, []);
 
   return (
     <div className="app" ref={appRef}>
@@ -388,7 +202,7 @@ function HuePage() {
   );
 }
 
-function SpotifyPage() {
+function SpotifyPageWrapper() {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -406,7 +220,7 @@ function SpotifyPage() {
         aria-label="Retour à l'accueil"
       >
       </button>
-      <HomePage2 />
+      <SpotifyPage />
     </div>
   );
 }
@@ -429,7 +243,7 @@ function AppContent() {
         <Route path="/electricity" element={<ElectricityPage />} />
         <Route path="/weather" element={<WeatherPage />} />
         <Route path="/hue" element={<HuePage />} />
-        <Route path="/spotify" element={<SpotifyPage />} />
+        <Route path="/spotify" element={<SpotifyPageWrapper />} />
       </Routes>
     </ScreensaverContext.Provider>
   );

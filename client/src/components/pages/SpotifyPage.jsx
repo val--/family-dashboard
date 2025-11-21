@@ -2,9 +2,9 @@ import React from 'react';
 import SpotifyWidget from '../widgets/SpotifyWidget';
 
 /**
- * Deuxième page du dashboard - Spotify
+ * Page Spotify du dashboard
  */
-function HomePage2() {
+function SpotifyPage() {
   return (
     <div className="home-page-2">
       <div className="home-page-2-content home-page-2-spotify">
@@ -14,5 +14,5 @@ function HomePage2() {
   );
 }
 
-export default HomePage2;
+export default SpotifyPage;
 
