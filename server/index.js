@@ -811,6 +811,16 @@ if (process.env.NODE_ENV === 'production') {
   }
 })();
 
+// Initialize Nantes categories on startup
+(async () => {
+  try {
+    console.log('[NantesEvents] Initializing categories on startup...');
+    await nantesEventsService.fetchAllCategories();
+  } catch (error) {
+    console.error('[NantesEvents] Error during categories initialization:', error);
+  }
+})();
+
 // Set up periodic refresh every hour (3600000 ms)
 setInterval(async () => {
   try {

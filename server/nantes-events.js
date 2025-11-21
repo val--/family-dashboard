@@ -1,4 +1,6 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const { parseISO, format, startOfDay, eachDayOfInterval, isSameDay } = require('date-fns');
 const { zonedTimeToUtc, utcToZonedTime } = require('date-fns-tz');
 const config = require('./config');
@@ -7,6 +9,10 @@ const config = require('./config');
 const API_BASE_URL = 'https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_agenda-evenements-nantes-metropole_v2/records';
 const PAGE_SIZE = 100; // Limite max de l'API
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+// Fichier pour stocker les catégories
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const CATEGORIES_FILE = path.join(DATA_DIR, 'nantes-categories.json');
 
 class NantesEventsService {
   constructor() {
@@ -23,56 +29,121 @@ class NantesEventsService {
     this.categoriesCacheTimestamp = null;
   }
 
-  async getAvailableCategories() {
-    // Check cache first
-    if (this.categoriesCache && this.categoriesCacheTimestamp && 
-        Date.now() - this.categoriesCacheTimestamp < CACHE_DURATION) {
-      return this.categoriesCache;
-    }
-
+  // Charger les catégories depuis le fichier JSON
+  loadCategoriesFromFile() {
     try {
-      // Récupérer un échantillon d'événements pour extraire les catégories
+      if (fs.existsSync(CATEGORIES_FILE)) {
+        const data = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
+        return data.categories || [];
+      }
+    } catch (error) {
+      console.error('Error loading categories from file:', error);
+    }
+    return null;
+  }
+
+  // Sauvegarder les catégories dans le fichier JSON
+  saveCategoriesToFile(categories) {
+    try {
+      // Créer le répertoire data s'il n'existe pas
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
+      const data = {
+        categories,
+        lastUpdated: new Date().toISOString()
+      };
+
+      fs.writeFileSync(CATEGORIES_FILE, JSON.stringify(data, null, 2), 'utf8');
+      console.log(`[NantesEvents] Saved ${categories.length} categories to ${CATEGORIES_FILE}`);
+    } catch (error) {
+      console.error('Error saving categories to file:', error);
+    }
+  }
+
+  // Récupérer toutes les catégories depuis l'API (utilisé au démarrage)
+  async fetchAllCategories() {
+    try {
+      console.log('[NantesEvents] Fetching all categories from API...');
       const now = new Date();
       const timezone = config.timezone || 'Europe/Paris';
       const today = startOfDay(utcToZonedTime(now, timezone));
       const todayStr = format(today, 'yyyy-MM-dd');
 
-      const url = `${API_BASE_URL}?limit=${PAGE_SIZE}&where=date%3E%3D%22${todayStr}%22`;
-      const response = await axios.get(url, {
-        timeout: 30000,
-        headers: { 
-          'Accept': 'application/json'
-        }
-      });
+      // Paginer à travers tous les événements futurs pour récupérer toutes les catégories
+      const categoriesSet = new Set();
+      let offset = 0;
+      let hasMore = true;
+      const maxPages = 50; // Limite de sécurité pour éviter une boucle infinie
+      let pageCount = 0;
 
-      const data = response.data;
-      if (!data || !data.results) {
-        return [];
+      while (hasMore && pageCount < maxPages) {
+        const url = `${API_BASE_URL}?limit=${PAGE_SIZE}&offset=${offset}&where=date%3E%3D%22${todayStr}%22%20AND%20annule=%22non%22`;
+        const response = await axios.get(url, {
+          timeout: 30000,
+          headers: { 
+            'Accept': 'application/json'
+          }
+        });
+
+        const data = response.data;
+        if (!data || !data.results || data.results.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        // Extraire les catégories de cette page
+        data.results.forEach(record => {
+          if (record.types_libelles && Array.isArray(record.types_libelles)) {
+            record.types_libelles.forEach(cat => {
+              if (cat && cat.trim()) {
+                categoriesSet.add(cat.trim());
+              }
+            });
+          }
+        });
+
+        // Vérifier s'il y a plus de résultats
+        if (data.results.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          offset += PAGE_SIZE;
+          pageCount++;
+        }
       }
 
-      // Extraire toutes les catégories uniques depuis types_libelles
-      const categoriesSet = new Set();
-      data.results.forEach(record => {
-        if (record.types_libelles && Array.isArray(record.types_libelles)) {
-          record.types_libelles.forEach(cat => {
-            if (cat && cat.trim()) {
-              categoriesSet.add(cat.trim());
-            }
-          });
-        }
-      });
-
       const categories = Array.from(categoriesSet).sort();
-
-      // Mettre en cache
-      this.categoriesCache = categories;
-      this.categoriesCacheTimestamp = Date.now();
+      console.log(`[NantesEvents] Found ${categories.length} unique categories`);
+      
+      // Sauvegarder dans le fichier
+      this.saveCategoriesToFile(categories);
 
       return categories;
     } catch (error) {
-      console.error('Error fetching available categories:', error);
+      console.error('Error fetching all categories:', error);
       return [];
     }
+  }
+
+  async getAvailableCategories() {
+    // Essayer de charger depuis le fichier d'abord
+    const fileCategories = this.loadCategoriesFromFile();
+    if (fileCategories && fileCategories.length > 0) {
+      // Mettre en cache en mémoire aussi
+      this.categoriesCache = fileCategories;
+      this.categoriesCacheTimestamp = Date.now();
+      return fileCategories;
+    }
+
+    // Si pas de fichier, vérifier le cache en mémoire
+    if (this.categoriesCache && this.categoriesCacheTimestamp && 
+        Date.now() - this.categoriesCacheTimestamp < CACHE_DURATION) {
+      return this.categoriesCache;
+    }
+
+    // Sinon, retourner un tableau vide (le fichier sera créé au démarrage)
+    return [];
   }
 
   async fetchRecords(selectedCategories = null, dateMax = null, limitRecords = null) {
