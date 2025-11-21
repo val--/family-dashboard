@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
@@ -22,9 +22,14 @@ function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState(null);
+  const [loadingMoreNantes, setLoadingMoreNantes] = useState(false);
+  const [nantesHasMore, setNantesHasMore] = useState(false);
+  const [nantesDateMax, setNantesDateMax] = useState(null);
   const { showGoogleEvents, showNantesEvents, showPullrougeEvents, nantesCategories, toggleGoogleEvents, toggleNantesEvents, togglePullrougeEvents, toggleNantesCategory, setNantesCategories } = useCalendarFilters();
   const appRef = useSimpleDragScroll('a, button, .event-item');
   const prevCategoriesRef = useRef();
+  const isInitialMountRef = useRef(true);
+  const fetchEventsInProgressRef = useRef(false);
   
   // Initialize ref on mount
   useEffect(() => {
@@ -32,7 +37,14 @@ function CalendarPage() {
   }, []);
 
   const fetchEvents = async () => {
+    // Éviter les appels en double
+    if (fetchEventsInProgressRef.current) {
+      console.log('[App] fetchEvents déjà en cours, ignoré');
+      return;
+    }
+    
     try {
+      fetchEventsInProgressRef.current = true;
       setError(null);
       setLoading(true);
       
@@ -52,20 +64,31 @@ function CalendarPage() {
         throw new Error(googleData.message || 'Failed to fetch Google Calendar events');
       }
 
-      // Fetch Nantes events with category filter
-      // null = show all, [] = show none, [cat1, cat2] = show specific
+      // Fetch Nantes events with category filter - initial load
+      // null = show all (1 day pagination), [] = show none, [cat1, cat2] = show specific (5 days pagination)
       setLoadingStep('Chargement des événements Nantes...');
+      const initialDateMax = new Date();
+      // Si toutes les catégories sont sélectionnées (null), paginer par 1 jour, sinon par 5 jours
+      const paginationDays = nantesCategories === null ? 1 : 5;
+      initialDateMax.setDate(initialDateMax.getDate() + paginationDays);
+      
       const categoriesParam = nantesCategories === null 
         ? '' // null = no filter, show all
-        : `?categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
-      const nantesResponse = await fetch(`/api/nantes-events${categoriesParam}`);
+        : `&categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
+      const nantesResponse = await fetch(`/api/nantes-events?dateMax=${initialDateMax.toISOString()}${categoriesParam}`);
       const nantesData = await nantesResponse.json();
       
       if (nantesData.success) {
-        setNantesEvents(nantesData.events || []);
+        const events = nantesData.events || [];
+        console.log(`[Nantes Events] Chargement initial: ${events.length} événements pour les ${paginationDays} prochain(s) jour(s)`);
+        setNantesEvents(events);
+        setNantesHasMore(nantesData.hasMore || false);
+        setNantesDateMax(initialDateMax);
       } else {
         console.warn('Failed to fetch Nantes events:', nantesData.message);
         setNantesEvents([]);
+        setNantesHasMore(false);
+        setNantesDateMax(null);
       }
       
       setLoadingStep('Finalisation...');
@@ -75,6 +98,7 @@ function CalendarPage() {
     } finally {
       setLoading(false);
       setLoadingStep('');
+      fetchEventsInProgressRef.current = false;
     }
   };
 
@@ -107,6 +131,12 @@ function CalendarPage() {
 
   // Refetch events when category filter changes
   useEffect(() => {
+    // Ignorer le premier rendu (déjà géré par le useEffect de montage)
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    
     const currentCategoriesStr = JSON.stringify(nantesCategories);
     const prevCategoriesStr = prevCategoriesRef.current;
     
@@ -114,17 +144,135 @@ function CalendarPage() {
     if (currentCategoriesStr !== prevCategoriesStr) {
       prevCategoriesRef.current = currentCategoriesStr;
       if (showNantesEvents) {
+        // Reset pagination when categories change
+        setNantesEvents([]);
+        setNantesHasMore(false);
+        setNantesDateMax(null);
         fetchEvents();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nantesCategories, showNantesEvents]);
 
+  // Load more Nantes events (infinite scroll) - memoized
+  const loadMoreNantesEvents = useCallback(async () => {
+    if (loadingMoreNantes || !nantesHasMore || !nantesDateMax) return;
+
+    try {
+      setLoadingMoreNantes(true);
+      
+      // Si toutes les catégories sont sélectionnées (null), paginer par 1 jour, sinon par 5 jours
+      const paginationDays = nantesCategories === null ? 1 : 5;
+      const nextDateMax = new Date(nantesDateMax);
+      nextDateMax.setDate(nextDateMax.getDate() + paginationDays);
+      
+      const categoriesParam = nantesCategories === null 
+        ? '' 
+        : `&categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
+      const response = await fetch(`/api/nantes-events?dateMax=${nextDateMax.toISOString()}${categoriesParam}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Ajouter les nouveaux événements aux existants
+        const newEvents = data.events || [];
+        console.log(`[Nantes Events] Chargement au scroll: ${newEvents.length} événements supplémentaires (${paginationDays} jour(s) suivant(s))`);
+        
+        // Utiliser une fonction de mise à jour pour éviter les conflits
+        setNantesEvents(prev => {
+          // Vérifier qu'on n'ajoute pas de doublons
+          const existingIds = new Set(prev.map(e => e.id));
+          const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
+          return [...prev, ...uniqueNewEvents];
+        });
+        
+        setNantesHasMore(data.hasMore || false);
+        setNantesDateMax(nextDateMax);
+      }
+    } catch (err) {
+      console.error('Error loading more Nantes events:', err);
+    } finally {
+      setLoadingMoreNantes(false);
+    }
+  }, [loadingMoreNantes, nantesHasMore, nantesDateMax, nantesCategories]);
+
+  // Infinite scroll detection with debounce
+  useEffect(() => {
+    if (!showNantesEvents || !nantesHasMore) return;
+
+    let scrollTimeout = null;
+    let lastScrollTop = 0;
+
+    const handleScroll = () => {
+      const container = appRef.current;
+      if (!container || loadingMoreNantes) return;
+
+      // Debounce: attendre 150ms après le dernier scroll
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+
+      scrollTimeout = setTimeout(() => {
+        const currentScrollTop = container.scrollTop;
+        
+        // Ne déclencher que si on scroll vers le bas (pas vers le haut)
+        if (currentScrollTop <= lastScrollTop) {
+          lastScrollTop = currentScrollTop;
+          return;
+        }
+        
+        lastScrollTop = currentScrollTop;
+
+        // Vérifier si on est proche du bas (300px avant la fin pour précharger plus tôt)
+        const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (scrollBottom < 300 && !loadingMoreNantes) {
+          loadMoreNantesEvents();
+        }
+      }, 150); // Debounce de 150ms
+    };
+
+    const container = appRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout);
+        }
+      };
+    }
+  }, [showNantesEvents, nantesHasMore, loadingMoreNantes, appRef, loadMoreNantesEvents]);
+
   // Merge and filter events based on checkboxes - memoized for performance
   const allEvents = useMemo(() => {
+    // Si les événements Nantes sont activés, calculer la date maximale chargée
+    let maxLoadedDate = null;
+    if (showNantesEvents && nantesEvents.length > 0) {
+      // Trouver la date maximale parmi les événements Nantes chargés
+      maxLoadedDate = nantesEvents.reduce((max, event) => {
+        const eventDate = new Date(event.date || event.start);
+        return eventDate > max ? eventDate : max;
+      }, new Date(0));
+      
+      // Arrondir à la fin de la journée pour inclure tous les événements de ce jour
+      maxLoadedDate.setHours(23, 59, 59, 999);
+    }
+    
+    // Filtrer les événements Google et PullRouge si nécessaire
+    const filteredGoogleEvents = showGoogleEvents ? googleEvents.filter(event => {
+      if (!maxLoadedDate || !showNantesEvents) return true;
+      const eventDate = new Date(event.date || event.start);
+      return eventDate <= maxLoadedDate;
+    }) : [];
+    
+    const filteredPullrougeEvents = showPullrougeEvents ? pullrougeEvents.filter(event => {
+      if (!maxLoadedDate || !showNantesEvents) return true;
+      const eventDate = new Date(event.date || event.start);
+      return eventDate <= maxLoadedDate;
+    }) : [];
+    
     const merged = [
-      ...(showGoogleEvents ? googleEvents : []),
-      ...(showPullrougeEvents ? pullrougeEvents : []),
+      ...filteredGoogleEvents,
+      ...filteredPullrougeEvents,
       ...(showNantesEvents ? nantesEvents : [])
     ];
     
@@ -179,6 +327,8 @@ function CalendarPage() {
         selectedCategories={nantesCategories}
         onToggleCategory={toggleNantesCategory}
         onSetCategories={setNantesCategories}
+        loadingMoreNantes={loadingMoreNantes}
+        nantesHasMore={nantesHasMore}
       />
     </div>
   );

@@ -75,27 +75,29 @@ class NantesEventsService {
     }
   }
 
-  async fetchAllRecords(selectedCategories = null) {
+  async fetchRecords(selectedCategories = null, dateMax = null, limitRecords = null) {
     const now = new Date();
     const timezone = config.timezone || 'Europe/Paris';
     const today = startOfDay(utcToZonedTime(now, timezone));
     const todayStr = format(today, 'yyyy-MM-dd');
 
+    // Si dateMax est fournie, l'utiliser, sinon pas de limite
+    let whereClause = `date>=%22${todayStr}%22`;
+    if (dateMax) {
+      const dateMaxStr = format(dateMax, 'yyyy-MM-dd');
+      whereClause += `%20AND%20date<=%22${dateMaxStr}%22`;
+    }
+    
+    // Filtrer les événements annulés
+    whereClause += `%20AND%20annule=%22non%22`;
+
     let allRecords = [];
     let offset = 0;
     let hasMore = true;
+    const maxRecords = limitRecords || 10000; // Limite par défaut pour éviter de tout charger
 
-    while (hasMore) {
+    while (hasMore && allRecords.length < maxRecords) {
       try {
-        // Construire la requête avec filtres
-        let whereClause = `date>=%22${todayStr}%22`;
-        
-        // Filtrer par catégories si nécessaire (côté API si possible)
-        // Pour l'instant, on récupère tout et on filtre après
-        
-        // Filtrer les événements annulés
-        whereClause += `%20AND%20annule=%22non%22`;
-        
         const url = `${API_BASE_URL}?limit=${PAGE_SIZE}&offset=${offset}&where=${whereClause}&order_by=date%20ASC`;
         
         const response = await axios.get(url, {
@@ -120,7 +122,7 @@ class NantesEventsService {
           offset += PAGE_SIZE;
         }
 
-        // Limite de sécurité pour éviter les boucles infinies
+        // Limite de sécurité
         if (offset > 10000) {
           console.warn('Reached safety limit for pagination');
           break;
@@ -134,24 +136,29 @@ class NantesEventsService {
     return allRecords;
   }
 
-  async getEvents(selectedCategories = null) {
-    // Check cache first
-    if (this.cache && this.cacheTimestamp && Date.now() - this.cacheTimestamp < CACHE_DURATION) {
+  async getEvents(selectedCategories = null, dateMax = null, limitRecords = null) {
+    // Pour la pagination, on ne peut pas utiliser le cache complet
+    // car on charge seulement une partie des événements
+    const cacheKey = `${JSON.stringify(selectedCategories)}_${dateMax ? format(dateMax, 'yyyy-MM-dd') : 'all'}_${limitRecords || 'all'}`;
+    
+    // Check cache first (seulement si pas de pagination)
+    if (!dateMax && !limitRecords && this.cache && this.cacheTimestamp && Date.now() - this.cacheTimestamp < CACHE_DURATION) {
       // If selectedCategories is explicitly an empty array, return no events (all categories deselected)
       if (Array.isArray(selectedCategories) && selectedCategories.length === 0) {
-        return [];
+        return { events: [], hasMore: false };
       }
       // If categories filter is applied, filter cached events
       if (selectedCategories && selectedCategories.length > 0) {
-        return this.cache.filter(event => {
+        const filtered = this.cache.filter(event => {
           if (!event.type) return false;
           // event.type can be a string with comma-separated categories
           const eventTypes = event.type.split(',').map(t => t.trim());
           return eventTypes.some(type => selectedCategories.includes(type));
         });
+        return { events: filtered, hasMore: false };
       }
       // If selectedCategories is null/undefined, return all events (no filter)
-      return this.cache;
+      return { events: this.cache, hasMore: false };
     }
 
     try {
@@ -159,8 +166,12 @@ class NantesEventsService {
       const timezone = config.timezone || 'Europe/Paris';
       const today = startOfDay(utcToZonedTime(now, timezone));
 
-      // Récupérer tous les enregistrements
-      const records = await this.fetchAllRecords(selectedCategories);
+      // Récupérer les enregistrements avec pagination
+      const records = await this.fetchRecords(selectedCategories, dateMax, limitRecords);
+      
+      if (dateMax) {
+        console.log(`[Nantes Events Server] Récupéré ${records.length} enregistrements jusqu'au ${format(dateMax, 'yyyy-MM-dd')}`);
+      }
 
       // Regrouper les enregistrements par id_manif (même événement, différentes dates)
       const eventsMap = new Map();
@@ -240,7 +251,9 @@ class NantesEventsService {
         const heureFin = record.heure_fin || null;
 
         // Ignorer l'heure si l'événement est "toute la journée"
-        const ignoreHeure = !heureDebut || heureDebut === '';
+        // Cas 1: pas d'heure de début
+        // Cas 2: heure_debut = "00:00" et heure_fin = null (événement toute la journée)
+        const ignoreHeure = !heureDebut || heureDebut === '' || (heureDebut === '00:00' && (!heureFin || heureFin === ''));
 
         // Construire les timestamps en timezone locale d'abord
         let beginDate, endDate;
@@ -294,6 +307,11 @@ class NantesEventsService {
         const { title, type, locationString, description, url, organizer, image, timings } = event;
 
         // Filtrer par catégories si nécessaire
+        // Si selectedCategories est un tableau vide, ne retourner aucun événement
+        if (Array.isArray(selectedCategories) && selectedCategories.length === 0) {
+          return; // Toutes les catégories sont désélectionnées, ne pas inclure cet événement
+        }
+        // Si selectedCategories contient des catégories, filtrer
         if (selectedCategories && selectedCategories.length > 0) {
           if (!type) return;
           const eventTypes = type.split(',').map(t => t.trim());
@@ -421,11 +439,33 @@ class NantesEventsService {
         return new Date(a.start) - new Date(b.start);
       });
 
-      // Mettre en cache
-      this.cache = formattedEvents;
-      this.cacheTimestamp = Date.now();
+      // Si limitRecords est fourni, limiter le nombre d'événements retournés
+      // (après le regroupement par id_manif, le nombre peut être différent)
+      let finalEvents = formattedEvents;
+      if (limitRecords && formattedEvents.length > limitRecords) {
+        finalEvents = formattedEvents.slice(0, limitRecords);
+      }
 
-      return formattedEvents;
+      // Déterminer s'il y a plus d'événements à charger
+      // Si on a limité par dateMax, on suppose qu'il y a toujours plus d'événements après
+      // (sauf si on n'a récupéré aucun événement, ce qui signifie qu'on a atteint la fin)
+      let hasMore = false;
+      if (dateMax) {
+        // Si on a des événements et qu'on a limité par date, il y a probablement plus après
+        // On suppose qu'il y a toujours plus d'événements après dateMax
+        hasMore = finalEvents.length > 0;
+      } else if (limitRecords) {
+        // Si on a limité par nombre, vérifier si on a atteint la limite
+        hasMore = formattedEvents.length >= limitRecords;
+      }
+
+      // Mettre en cache seulement si on charge tout (pas de pagination)
+      if (!dateMax && !limitRecords) {
+        this.cache = formattedEvents;
+        this.cacheTimestamp = Date.now();
+      }
+
+      return { events: finalEvents, hasMore };
     } catch (error) {
       console.error('Error fetching Nantes events:', error);
       throw error;

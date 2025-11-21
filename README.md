@@ -363,6 +363,8 @@ docker-compose down -v
 
 ## Idées / TODO
 
+- **Agenda** : ajout d'un bouton "star / favori" sur les événements non-Google pour les ajouter à l'Agenda Familial en 1 clic
+
 - **Carte du réseau local** : Visualisation des appareils connectés
   - Intégration avec la Freebox et/ou le routeur TP-Link
   - Affichage des appareils connectés au réseau local
@@ -370,4 +372,4 @@ docker-compose down -v
   - Appareils moins actifs affichés en noir & blanc
   - Vue d'ensemble de la consommation réseau de la maison
 
-- **Utilitaires /outis basiques** comme un minuteur
+- **Utilitaires / outils basiques** comme un minuteur (mais besoin d'une enceinte)

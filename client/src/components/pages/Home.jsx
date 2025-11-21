@@ -19,6 +19,8 @@ function Home() {
   const [electricityLoading, setElectricityLoading] = useState(true);
   const [electricityError, setElectricityError] = useState(null);
   const prevCategoriesRef = useRef();
+  const isInitialMountRef = useRef(true);
+  const fetchEventsInProgressRef = useRef(false);
   
   // Initialize ref on mount
   useEffect(() => {
@@ -26,7 +28,14 @@ function Home() {
   }, []);
 
   const fetchEvents = async () => {
+    // Éviter les appels en double
+    if (fetchEventsInProgressRef.current) {
+      console.log('[Home] fetchEvents déjà en cours, ignoré');
+      return;
+    }
+    
     try {
+      fetchEventsInProgressRef.current = true;
       setError(null);
       
       // Fetch Google Calendar events (which includes PullRouge events merged by the server)
@@ -44,16 +53,20 @@ function Home() {
         throw new Error(googleData.message || 'Failed to fetch Google Calendar events');
       }
 
-      // Fetch Nantes events with category filter
-      // null = show all, [] = show none, [cat1, cat2] = show specific
+      // Fetch Nantes events with category filter - limité pour la page d'accueil
+      // On limite à 7 jours et max 20 événements car on n'affiche que MAX_EVENTS_WIDGET (10) au total
+      const initialDateMax = new Date();
+      initialDateMax.setDate(initialDateMax.getDate() + 7); // 7 jours seulement pour la page d'accueil
+      
       const categoriesParam = nantesCategories === null 
         ? '' // null = no filter, show all
-        : `?categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
-      const nantesResponse = await fetch(`/api/nantes-events${categoriesParam}`);
+        : `&categories=${encodeURIComponent(JSON.stringify(nantesCategories))}`;
+      const nantesResponse = await fetch(`/api/nantes-events?dateMax=${initialDateMax.toISOString()}&limit=20${categoriesParam}`);
       const nantesData = await nantesResponse.json();
       
       if (nantesData.success) {
         const events = nantesData.events || [];
+        console.log(`[Home] Chargement Nantes: ${events.length} événements (limité à 7 jours, max 20)`);
         setNantesEvents(events);
       } else {
         console.warn('Failed to fetch Nantes events:', nantesData.message);
@@ -64,6 +77,7 @@ function Home() {
       setError(err.message || 'Erreur lors du chargement des événements');
     } finally {
       setLoading(false);
+      fetchEventsInProgressRef.current = false;
     }
   };
 
@@ -141,6 +155,12 @@ function Home() {
 
   // Refetch events when category filter or showNantesEvents changes
   useEffect(() => {
+    // Ignorer le premier rendu (déjà géré par le useEffect de montage)
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    
     const currentCategoriesStr = JSON.stringify(nantesCategories);
     const prevCategoriesStr = prevCategoriesRef.current;
     

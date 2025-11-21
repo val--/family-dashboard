@@ -49,8 +49,17 @@ app.get('/api/nantes-events', async (req, res) => {
       ? JSON.parse(decodeURIComponent(req.query.categories))
       : null;
     
-    const events = await nantesEventsService.getEvents(selectedCategories);
-    res.json({ events, success: true });
+    // Parse pagination parameters
+    const dateMax = req.query.dateMax ? new Date(req.query.dateMax) : null;
+    const limitRecords = req.query.limit ? parseInt(req.query.limit, 10) : null;
+    
+    const result = await nantesEventsService.getEvents(selectedCategories, dateMax, limitRecords);
+    
+    res.json({ 
+      events: result.events, 
+      hasMore: result.hasMore,
+      success: true 
+    });
   } catch (error) {
     console.error('Error in /api/nantes-events:', error);
     res.status(500).json({ 
