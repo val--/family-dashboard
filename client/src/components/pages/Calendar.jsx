@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -13,6 +13,32 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
   const [showScrollTop, setShowScrollTop] = useState(false);
   const navigate = useNavigate();
   const categoryFilterRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
+
+  // Memoize events grouping and sorting
+  const { eventsByDate, sortedDateKeys } = useMemo(() => {
+    if (!events || events.length === 0) {
+      return { eventsByDate: {}, sortedDateKeys: [] };
+    }
+
+    const grouped = events.reduce((groups, event) => {
+      const dateKey = event.date || startOfDay(parseISO(event.start)).toISOString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(event);
+      return groups;
+    }, {});
+
+    const sorted = Object.keys(grouped).sort();
+    return { eventsByDate: grouped, sortedDateKeys: sorted };
+  }, [events]);
+
+  // Find selected event object only when needed
+  const selectedEventObj = useMemo(() => {
+    if (!selectedEvent || !events) return null;
+    return events.find(e => e.id === selectedEvent);
+  }, [selectedEvent, events]);
 
   if (!events || events.length === 0) {
     return (
@@ -24,19 +50,6 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
       </div>
     );
   }
-
-  // Group events by date
-  const eventsByDate = events.reduce((groups, event) => {
-    const dateKey = event.date || startOfDay(parseISO(event.start)).toISOString();
-    if (!groups[dateKey]) {
-      groups[dateKey] = [];
-    }
-    groups[dateKey].push(event);
-    return groups;
-  }, {});
-
-  // Get date keys sorted
-  const sortedDateKeys = Object.keys(eventsByDate).sort();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,27 +67,35 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
     }
   }, [showCategoryFilter]);
 
-  // Handle scroll to show/hide scroll to top button
+  // Handle scroll to show/hide scroll to top button with debounce
   useEffect(() => {
     let appContainer = null;
     let scrollListener = null;
 
     const handleScroll = () => {
-      let scrollTop = 0;
-      
-      // Try to find the .app container (parent scroll container)
-      if (!appContainer) {
-        appContainer = document.querySelector('.app');
+      // Clear previous timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
       }
-      
-      if (appContainer) {
-        scrollTop = appContainer.scrollTop;
-      } else {
-        // Fallback to window scroll
-        scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      }
-      
-      setShowScrollTop(scrollTop > 100); // Show button after scrolling 100px
+
+      // Debounce scroll handler
+      scrollTimeoutRef.current = setTimeout(() => {
+        let scrollTop = 0;
+        
+        // Try to find the .app container (parent scroll container)
+        if (!appContainer) {
+          appContainer = document.querySelector('.app');
+        }
+        
+        if (appContainer) {
+          scrollTop = appContainer.scrollTop;
+        } else {
+          // Fallback to window scroll
+          scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        }
+        
+        setShowScrollTop(scrollTop > 100); // Show button after scrolling 100px
+      }, 50); // Debounce de 50ms
     };
 
     // Wait a bit for the DOM to be ready, then set up scroll listener
@@ -104,14 +125,17 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
 
     return () => {
       clearTimeout(timeoutId);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
       if (scrollListener) {
         scrollListener.removeEventListener('scroll', handleScroll);
       }
     };
   }, []);
 
-  // Scroll to top function
-  const scrollToTop = () => {
+  // Scroll to top function - memoized
+  const scrollToTop = useCallback(() => {
     // Try to scroll the .app container
     const appContainer = document.querySelector('.app');
     if (appContainer) {
@@ -126,7 +150,17 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
         behavior: 'smooth'
       });
     }
-  };
+  }, []);
+
+  // Memoize event click handler
+  const handleEventClick = useCallback((eventId) => {
+    setSelectedEvent(prev => prev === eventId ? null : eventId);
+  }, []);
+
+  // Memoize close modal handler
+  const handleCloseModal = useCallback(() => {
+    setSelectedEvent(null);
+  }, []);
 
   return (
     <div className="calendar">
@@ -240,177 +274,8 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
                           event={event} 
                           compact={false}
                           isSelected={isSelected}
-                          onClick={() => setSelectedEvent(isSelected ? null : event.id)}
+                          onClick={() => handleEventClick(event.id)}
                         />
-                        {isSelected && (
-                          <div className="event-modal-overlay" onClick={() => setSelectedEvent(null)}>
-                            <div className={`event-modal ${event.image ? 'event-modal-with-image' : ''}`} onClick={(e) => e.stopPropagation()}>
-                              <button className="event-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
-                              {event.image ? (
-                                <div className="event-modal-layout">
-                                  <div className="event-modal-image-container">
-                                    <img src={event.image} alt={event.title} />
-                                  </div>
-                                  <div className="event-modal-content-container">
-                                    <div className="event-modal-header">
-                                      <h2 className="event-modal-title">{event.title}</h2>
-                                    </div>
-                                    <div className="event-modal-content">
-                                <div className="event-details-section">
-                                  <div className="event-details-label">Horaires</div>
-                                  <div className="event-details-value">
-                                    {event.isAllDay ? (
-                                      <span>Toute la journée</span>
-                                    ) : event.end ? (
-                                      <span>
-                                        {format(parseISO(event.start), 'HH:mm', { locale: fr })} – {format(parseISO(event.end), 'HH:mm', { locale: fr })}
-                                      </span>
-                                    ) : (
-                                      <span>
-                                        {format(parseISO(event.start), 'HH:mm', { locale: fr })}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                {event.description && (
-                                  <div className="event-details-section">
-                                    <div className="event-details-label">Description</div>
-                                    <div className="event-details-value event-description-text">{event.description}</div>
-                                  </div>
-                                )}
-                                {event.location && (
-                                  <div className="event-details-section">
-                                    <div className="event-details-label">Lieu</div>
-                                    <div className="event-details-value">{event.location}</div>
-                                  </div>
-                                )}
-                                {event.source === 'nantes' && event.type && (
-                                  <div className="event-details-section">
-                                    <div className="event-details-label">Type</div>
-                                    <div className="event-details-value">{event.type}</div>
-                                  </div>
-                                )}
-                                {event.source === 'nantes' && event.organizer && (
-                                  <div className="event-details-section">
-                                    <div className="event-details-label">Organisateur</div>
-                                    <div className="event-details-value">{event.organizer}</div>
-                                  </div>
-                                )}
-                                {event.source === 'pullrouge' && event.priceInfo && (
-                                  <div className="event-details-section">
-                                    <div className="event-details-label">Prix / Infos</div>
-                                    <div className="event-details-value">{event.priceInfo}</div>
-                                  </div>
-                                )}
-                                       {event.source === 'nantes' && event.url && (
-                                         <div className="event-details-section">
-                                           <div className="event-details-label">Plus d'infos</div>
-                                           <div className="event-details-value">
-                                             <div className="event-modal-qr">
-                                               <p className="event-modal-qr-label">Scanner pour plus d'informations :</p>
-                                               <div className="event-modal-qr-code">
-                                                 <QRCodeSVG
-                                                   value={event.url}
-                                                   size={200}
-                                                   level="M"
-                                                   includeMargin={true}
-                                                 />
-                                               </div>
-                                             </div>
-                                           </div>
-                                         </div>
-                                       )}
-                                {isSchoolHoliday(event.date || event.start) && (
-                                  <div className="event-details-section event-details-notes">
-                                    <div className="event-details-label">Notes</div>
-                                    <div className="event-details-value">Pendant les vacances scolaires !</div>
-                                  </div>
-                                )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="event-modal-header">
-                                    <h2 className="event-modal-title">{event.title}</h2>
-                                  </div>
-                                  <div className="event-modal-content">
-                                    <div className="event-details-section">
-                                      <div className="event-details-label">Horaires</div>
-                                      <div className="event-details-value">
-                                        {event.isAllDay ? (
-                                          <span>Toute la journée</span>
-                                        ) : event.end ? (
-                                          <span>
-                                            {format(parseISO(event.start), 'HH:mm', { locale: fr })} – {format(parseISO(event.end), 'HH:mm', { locale: fr })}
-                                          </span>
-                                        ) : (
-                                          <span>
-                                            {format(parseISO(event.start), 'HH:mm', { locale: fr })}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {event.description && (
-                                      <div className="event-details-section">
-                                        <div className="event-details-label">Description</div>
-                                        <div className="event-details-value event-description-text">{event.description}</div>
-                                      </div>
-                                    )}
-                                    {event.location && (
-                                      <div className="event-details-section">
-                                        <div className="event-details-label">Lieu</div>
-                                        <div className="event-details-value">{event.location}</div>
-                                      </div>
-                                    )}
-                                    {event.source === 'nantes' && event.type && (
-                                      <div className="event-details-section">
-                                        <div className="event-details-label">Type</div>
-                                        <div className="event-details-value">{event.type}</div>
-                                      </div>
-                                    )}
-                                    {event.source === 'nantes' && event.organizer && (
-                                      <div className="event-details-section">
-                                        <div className="event-details-label">Organisateur</div>
-                                        <div className="event-details-value">{event.organizer}</div>
-                                      </div>
-                                    )}
-                                    {event.source === 'pullrouge' && event.priceInfo && (
-                                      <div className="event-details-section">
-                                        <div className="event-details-label">Prix / Infos</div>
-                                        <div className="event-details-value">{event.priceInfo}</div>
-                                      </div>
-                                    )}
-                                    {event.source === 'nantes' && event.url && (
-                                      <div className="event-details-section">
-                                        <div className="event-details-label">Plus d'infos</div>
-                                        <div className="event-details-value">
-                                          <div className="event-modal-qr">
-                                            <p className="event-modal-qr-label">Scanner pour plus d'informations :</p>
-                                            <div className="event-modal-qr-code">
-                                              <QRCodeSVG
-                                                value={event.url}
-                                                size={200}
-                                                level="M"
-                                                includeMargin={true}
-                                              />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                    {isSchoolHoliday(event.date || event.start) && (
-                                      <div className="event-details-section event-details-notes">
-                                        <div className="event-details-label">Notes</div>
-                                        <div className="event-details-value">Pendant les vacances scolaires !</div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </li>
                     );
               })}
@@ -423,6 +288,176 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
           </div>
         );
       })}
+      {/* Render modal only once, outside the map */}
+      {selectedEventObj && (
+        <div className="event-modal-overlay" onClick={handleCloseModal}>
+          <div className={`event-modal ${selectedEventObj.image ? 'event-modal-with-image' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <button className="event-modal-close" onClick={handleCloseModal}>×</button>
+            {selectedEventObj.image ? (
+              <div className="event-modal-layout">
+                <div className="event-modal-image-container">
+                  <img src={selectedEventObj.image} alt={selectedEventObj.title} loading="lazy" />
+                </div>
+                <div className="event-modal-content-container">
+                  <div className="event-modal-header">
+                    <h2 className="event-modal-title">{selectedEventObj.title}</h2>
+                  </div>
+                  <div className="event-modal-content">
+                    <div className="event-details-section">
+                      <div className="event-details-label">Horaires</div>
+                      <div className="event-details-value">
+                        {selectedEventObj.isAllDay ? (
+                          <span>Toute la journée</span>
+                        ) : selectedEventObj.end ? (
+                          <span>
+                            {format(parseISO(selectedEventObj.start), 'HH:mm', { locale: fr })} – {format(parseISO(selectedEventObj.end), 'HH:mm', { locale: fr })}
+                          </span>
+                        ) : (
+                          <span>
+                            {format(parseISO(selectedEventObj.start), 'HH:mm', { locale: fr })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {selectedEventObj.description && (
+                      <div className="event-details-section">
+                        <div className="event-details-label">Description</div>
+                        <div className="event-details-value event-description-text">{selectedEventObj.description}</div>
+                      </div>
+                    )}
+                    {selectedEventObj.location && (
+                      <div className="event-details-section">
+                        <div className="event-details-label">Lieu</div>
+                        <div className="event-details-value">{selectedEventObj.location}</div>
+                      </div>
+                    )}
+                    {selectedEventObj.source === 'nantes' && selectedEventObj.type && (
+                      <div className="event-details-section">
+                        <div className="event-details-label">Type</div>
+                        <div className="event-details-value">{selectedEventObj.type}</div>
+                      </div>
+                    )}
+                    {selectedEventObj.source === 'nantes' && selectedEventObj.organizer && (
+                      <div className="event-details-section">
+                        <div className="event-details-label">Organisateur</div>
+                        <div className="event-details-value">{selectedEventObj.organizer}</div>
+                      </div>
+                    )}
+                    {selectedEventObj.source === 'pullrouge' && selectedEventObj.priceInfo && (
+                      <div className="event-details-section">
+                        <div className="event-details-label">Prix / Infos</div>
+                        <div className="event-details-value">{selectedEventObj.priceInfo}</div>
+                      </div>
+                    )}
+                    {selectedEventObj.source === 'nantes' && selectedEventObj.url && (
+                      <div className="event-details-section">
+                        <div className="event-details-label">Plus d'infos</div>
+                        <div className="event-details-value">
+                          <div className="event-modal-qr">
+                            <p className="event-modal-qr-label">Scanner pour plus d'informations :</p>
+                            <div className="event-modal-qr-code">
+                              <QRCodeSVG
+                                value={selectedEventObj.url}
+                                size={200}
+                                level="M"
+                                includeMargin={true}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {isSchoolHoliday(selectedEventObj.date || selectedEventObj.start) && (
+                      <div className="event-details-section event-details-notes">
+                        <div className="event-details-label">Notes</div>
+                        <div className="event-details-value">Pendant les vacances scolaires !</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="event-modal-header">
+                  <h2 className="event-modal-title">{selectedEventObj.title}</h2>
+                </div>
+                <div className="event-modal-content">
+                  <div className="event-details-section">
+                    <div className="event-details-label">Horaires</div>
+                    <div className="event-details-value">
+                      {selectedEventObj.isAllDay ? (
+                        <span>Toute la journée</span>
+                      ) : selectedEventObj.end ? (
+                        <span>
+                          {format(parseISO(selectedEventObj.start), 'HH:mm', { locale: fr })} – {format(parseISO(selectedEventObj.end), 'HH:mm', { locale: fr })}
+                        </span>
+                      ) : (
+                        <span>
+                          {format(parseISO(selectedEventObj.start), 'HH:mm', { locale: fr })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {selectedEventObj.description && (
+                    <div className="event-details-section">
+                      <div className="event-details-label">Description</div>
+                      <div className="event-details-value event-description-text">{selectedEventObj.description}</div>
+                    </div>
+                  )}
+                  {selectedEventObj.location && (
+                    <div className="event-details-section">
+                      <div className="event-details-label">Lieu</div>
+                      <div className="event-details-value">{selectedEventObj.location}</div>
+                    </div>
+                  )}
+                  {selectedEventObj.source === 'nantes' && selectedEventObj.type && (
+                    <div className="event-details-section">
+                      <div className="event-details-label">Type</div>
+                      <div className="event-details-value">{selectedEventObj.type}</div>
+                    </div>
+                  )}
+                  {selectedEventObj.source === 'nantes' && selectedEventObj.organizer && (
+                    <div className="event-details-section">
+                      <div className="event-details-label">Organisateur</div>
+                      <div className="event-details-value">{selectedEventObj.organizer}</div>
+                    </div>
+                  )}
+                  {selectedEventObj.source === 'pullrouge' && selectedEventObj.priceInfo && (
+                    <div className="event-details-section">
+                      <div className="event-details-label">Prix / Infos</div>
+                      <div className="event-details-value">{selectedEventObj.priceInfo}</div>
+                    </div>
+                  )}
+                  {selectedEventObj.source === 'nantes' && selectedEventObj.url && (
+                    <div className="event-details-section">
+                      <div className="event-details-label">Plus d'infos</div>
+                      <div className="event-details-value">
+                        <div className="event-modal-qr">
+                          <p className="event-modal-qr-label">Scanner pour plus d'informations :</p>
+                          <div className="event-modal-qr-code">
+                            <QRCodeSVG
+                              value={selectedEventObj.url}
+                              size={200}
+                              level="M"
+                              includeMargin={true}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {isSchoolHoliday(selectedEventObj.date || selectedEventObj.start) && (
+                    <div className="event-details-section event-details-notes">
+                      <div className="event-details-label">Notes</div>
+                      <div className="event-details-value">Pendant les vacances scolaires !</div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {showScrollTop && (
         <button 
           className="scroll-to-top-button" 

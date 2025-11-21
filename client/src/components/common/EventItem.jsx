@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { isSchoolHoliday, getColorScheme, getCategoryColor } from '../../utils';
 
 /**
@@ -16,8 +16,9 @@ export const formatEventTime = (event) => {
 
 /**
  * Event item component - can be used in both widget and full calendar
+ * Memoized to prevent unnecessary re-renders
  */
-export function EventItem({ event, compact = false, onClick, isSelected = false }) {
+function EventItemComponent({ event, compact = false, onClick, isSelected = false }) {
   const timeDisplay = formatEventTime(event);
   const colorScheme = getColorScheme(event.date);
   const isHoliday = isSchoolHoliday(event.date || event.start);
@@ -77,4 +78,17 @@ export function EventItem({ event, compact = false, onClick, isSelected = false 
     </div>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export const EventItem = memo(EventItemComponent, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.event.id === nextProps.event.id &&
+    prevProps.event.title === nextProps.event.title &&
+    prevProps.event.time === nextProps.event.time &&
+    prevProps.event.location === nextProps.event.location &&
+    prevProps.compact === nextProps.compact &&
+    prevProps.isSelected === nextProps.isSelected
+  );
+});
 

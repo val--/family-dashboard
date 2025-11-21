@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Calendar from './components/pages/Calendar';
 import DashboardPages from './components/common/DashboardPages';
@@ -120,17 +120,21 @@ function CalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nantesCategories, showNantesEvents]);
 
-  // Merge and filter events based on checkboxes
-  const allEvents = [
-    ...(showGoogleEvents ? googleEvents : []),
-    ...(showPullrougeEvents ? pullrougeEvents : []),
-    ...(showNantesEvents ? nantesEvents : [])
-  ].sort((a, b) => {
+  // Merge and filter events based on checkboxes - memoized for performance
+  const allEvents = useMemo(() => {
+    const merged = [
+      ...(showGoogleEvents ? googleEvents : []),
+      ...(showPullrougeEvents ? pullrougeEvents : []),
+      ...(showNantesEvents ? nantesEvents : [])
+    ];
+    
     // Sort by date first, then by start time
-    const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
-    if (dateCompare !== 0) return dateCompare;
-    return new Date(a.start) - new Date(b.start);
-  });
+    return merged.sort((a, b) => {
+      const dateCompare = new Date(a.date || a.start) - new Date(b.date || b.start);
+      if (dateCompare !== 0) return dateCompare;
+      return new Date(a.start) - new Date(b.start);
+    });
+  }, [showGoogleEvents, showPullrougeEvents, showNantesEvents, googleEvents, pullrougeEvents, nantesEvents]);
 
   if (loading) {
     return (

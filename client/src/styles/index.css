@@ -961,6 +961,9 @@ body.spotify-page #root {
 
 .date-section {
   margin-bottom: 20px;
+  /* Optimize rendering performance */
+  transform: translateZ(0);
+  will-change: contents;
 }
 
 .date-section:first-child .calendar-title {
@@ -1124,6 +1127,8 @@ body.spotify-page #root {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Optimize rendering performance */
+  contain: layout style paint;
 }
 
 .event-item {
@@ -1146,6 +1151,9 @@ body.spotify-page #root {
   -webkit-user-select: none;
   position: relative;
   overflow: visible;
+  /* Optimize rendering performance */
+  transform: translateZ(0);
+  contain: layout style;
 }
 
 .event-item::before {
