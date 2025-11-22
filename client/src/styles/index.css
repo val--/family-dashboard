@@ -291,13 +291,19 @@ body.spotify-page #root {
 .electricity-stats {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+}
+
+.electricity-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .electricity-stat-card {
   background: #ffffff;
   border-radius: 6px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   box-shadow: none;
   transition: background 0.2s ease;
 }
@@ -309,7 +315,7 @@ body.spotify-page #root {
 }
 
 .electricity-stat-chart {
-  padding-bottom: 20px;
+  padding-bottom: 8px;
 }
 
 .electricity-stat-label {
@@ -318,7 +324,7 @@ body.spotify-page #root {
   color: #6c757d;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .electricity-stat-value {
@@ -339,17 +345,18 @@ body.spotify-page #root {
 .electricity-stat-subvalue {
   font-size: 10px;
   color: #6c757d;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .electricity-stat-comparison {
-  font-size: 12px;
+  font-size: 11px;
   color: #868e96;
-  margin-top: 6px;
+  margin-top: 4px;
   font-style: italic;
   display: flex;
   align-items: center;
   gap: 4px;
+  line-height: 1.3;
 }
 
 .electricity-stat-comparison-better {
@@ -377,7 +384,7 @@ body.spotify-page #root {
   justify-content: space-between;
   gap: 4px;
   height: 90px;
-  margin-top: 8px;
+  margin-top: 4px;
   padding: 0 2px;
 }
 

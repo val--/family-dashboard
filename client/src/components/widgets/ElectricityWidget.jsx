@@ -116,60 +116,59 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
   // Full mode: show all stats
   return (
     <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
-      <div className="electricity-widget-header">
-        <h2 className="electricity-widget-title">Consommation Électrique</h2>
-      </div>
       <div className="electricity-widget-content">
         <div className="electricity-stats">
-          <div className="electricity-stat-card electricity-stat-today">
-            <div className="electricity-stat-label">Hier</div>
-            <div className="electricity-stat-value">
-              {formatValue(data.yesterday || 0)} <span className="electricity-stat-unit">kWh</span>
-            </div>
-            {data.dayBeforeYesterday > 0 && data.yesterday !== undefined && data.yesterday !== null && (
-              <div className="electricity-stat-comparison">
-                {data.yesterday < data.dayBeforeYesterday ? (
-                  <>
-                    <span className="electricity-stat-comparison-better">↓</span> Mieux que la veille ({Math.abs(data.yesterday - data.dayBeforeYesterday).toFixed(2)} kWh de moins)
-                  </>
-                ) : data.yesterday > data.dayBeforeYesterday ? (
-                  <>
-                    <span className="electricity-stat-comparison-worse">↑</span> En hausse par rapport à la veille (+{Math.abs(data.yesterday - data.dayBeforeYesterday).toFixed(2)} kWh)
-                  </>
-                ) : (
-                  <>
-                    <span className="electricity-stat-comparison-same">→</span> Identique à la veille
-                  </>
-                )}
+          <div className="electricity-stats-row">
+            <div className="electricity-stat-card electricity-stat-today">
+              <div className="electricity-stat-label">Hier</div>
+              <div className="electricity-stat-value">
+                {formatValue(data.yesterday || 0)} <span className="electricity-stat-unit">kWh</span>
               </div>
-            )}
-          </div>
+              {data.dayBeforeYesterday > 0 && data.yesterday !== undefined && data.yesterday !== null && (
+                <div className="electricity-stat-comparison">
+                  {data.yesterday < data.dayBeforeYesterday ? (
+                    <>
+                      <span className="electricity-stat-comparison-better">↓</span> Mieux que la veille ({Math.abs(data.yesterday - data.dayBeforeYesterday).toFixed(2)} kWh de moins)
+                    </>
+                  ) : data.yesterday > data.dayBeforeYesterday ? (
+                    <>
+                      <span className="electricity-stat-comparison-worse">↑</span> En hausse par rapport à la veille (+{Math.abs(data.yesterday - data.dayBeforeYesterday).toFixed(2)} kWh)
+                    </>
+                  ) : (
+                    <>
+                      <span className="electricity-stat-comparison-same">→</span> Identique à la veille
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
-          <div className="electricity-stat-card electricity-stat-week">
-            <div className="electricity-stat-label">7 derniers jours</div>
-            <div className="electricity-stat-value">
-              {formatValue(data.weekTotal)} <span className="electricity-stat-unit">kWh</span>
-            </div>
-            <div className="electricity-stat-subvalue">
-              Moyenne: {formatValue(data.weekAverage)} kWh/jour
-            </div>
-            {data.previousWeekTotal > 0 && (
-              <div className="electricity-stat-comparison">
-                {data.weekTotal < data.previousWeekTotal ? (
-                  <>
-                    <span className="electricity-stat-comparison-better">↓</span> Consommation en baisse par rapport à la semaine précédente ({Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh de moins)
-                  </>
-                ) : data.weekTotal > data.previousWeekTotal ? (
-                  <>
-                    <span className="electricity-stat-comparison-worse">↑</span> Consommation en hausse par rapport à la semaine précédente (+{Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh)
-                  </>
-                ) : (
-                  <>
-                    <span className="electricity-stat-comparison-same">→</span> Consommation identique à la semaine précédente
-                  </>
-                )}
+            <div className="electricity-stat-card electricity-stat-week">
+              <div className="electricity-stat-label">7 derniers jours</div>
+              <div className="electricity-stat-value">
+                {formatValue(data.weekTotal)} <span className="electricity-stat-unit">kWh</span>
               </div>
-            )}
+              <div className="electricity-stat-subvalue">
+                Moyenne: {formatValue(data.weekAverage)} kWh/jour
+              </div>
+              {data.previousWeekTotal > 0 && (
+                <div className="electricity-stat-comparison">
+                  {data.weekTotal < data.previousWeekTotal ? (
+                    <>
+                      <span className="electricity-stat-comparison-better">↓</span> En baisse par rapport à la semaine précédente ({Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh de moins)
+                    </>
+                  ) : data.weekTotal > data.previousWeekTotal ? (
+                    <>
+                      <span className="electricity-stat-comparison-worse">↑</span> En hausse par rapport à la semaine précédente (+{Math.abs(data.weekTotal - data.previousWeekTotal).toFixed(2)} kWh)
+                    </>
+                  ) : (
+                    <>
+                      <span className="electricity-stat-comparison-same">→</span> Identique à la semaine précédente
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {data.contractInfo && (
