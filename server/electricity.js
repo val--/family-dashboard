@@ -12,6 +12,8 @@ class ElectricityService {
     this.cache = null;
     this.cacheTimestamp = null;
     this.cacheDailyChartDays = null; // Track which dailyChartDays was cached
+    this.baseDataCache = null; // Cache for base data (yesterday, weekTotal, etc.) independent of dailyChartDays
+    this.baseDataCacheTimestamp = null;
     this.CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
     this.last409ErrorLogTime = 0;
     this.ERROR_LOG_INTERVAL = 5 * 60 * 1000; // Log 409 errors at most once every 5 minutes
@@ -24,6 +26,8 @@ class ElectricityService {
     this.cache = null;
     this.cacheTimestamp = null;
     this.cacheDailyChartDays = null;
+    this.baseDataCache = null;
+    this.baseDataCacheTimestamp = null;
   }
 
   async fetchFromAPI(endpoint, retries = 2) {
@@ -217,8 +221,13 @@ class ElectricityService {
    * @param {number} dailyChartDays - Number of days to include in daily chart (default: 7)
    */
   async getWidgetData(dailyChartDays = 7) {
-    // Check cache first - only use cache if it matches the requested dailyChartDays
-    if (this.cache && this.cacheTimestamp && this.cacheDailyChartDays === dailyChartDays && Date.now() - this.cacheTimestamp < this.CACHE_DURATION) {
+    // Check if we have fresh base data (yesterday, weekTotal, etc.) that doesn't depend on dailyChartDays
+    const hasFreshBaseData = this.baseDataCache && this.baseDataCacheTimestamp && 
+                             Date.now() - this.baseDataCacheTimestamp < this.CACHE_DURATION;
+    
+    // Check cache first - only use cache if it matches the requested dailyChartDays AND has fresh base data
+    if (this.cache && this.cacheTimestamp && this.cacheDailyChartDays === dailyChartDays && 
+        Date.now() - this.cacheTimestamp < this.CACHE_DURATION && hasFreshBaseData) {
       return this.cache;
     }
 
@@ -231,6 +240,7 @@ class ElectricityService {
       const twoWeeksAgo = subDays(startOfToday, 14);
       const dailyChartStart = subDays(startOfToday, dailyChartDays);
 
+      // Always fetch at least 7 days to ensure we have yesterday's data
       // Get daily consumption for the requested period (7 days by default, or more if dailyChartDays > 7)
       const daysToFetch = Math.max(7, dailyChartDays);
       const fetchStart = subDays(startOfToday, daysToFetch);
@@ -489,20 +499,31 @@ class ElectricityService {
         monthlyChartData = [];
       }
 
-      const result = {
-        today: Math.round(todayConsumption * 100) / 100, // Round to 2 decimals
+      // Base data that doesn't depend on dailyChartDays
+      // Always use freshly calculated values when we make an API call
+      const baseData = {
+        today: Math.round(todayConsumption * 100) / 100,
         yesterday: Math.round(yesterdayConsumption * 100) / 100,
         dayBeforeYesterday: Math.round(dayBeforeYesterdayConsumption * 100) / 100,
         weekTotal: Math.round(weekTotal * 100) / 100,
         weekAverage: Math.round((weekTotal / 7) * 100) / 100,
         previousWeekTotal: Math.round(previousWeekTotal * 100) / 100,
-        dailyChartData,
-        monthlyChartData,
         contractInfo,
         lastUpdate: new Date().toISOString()
       };
 
-      // Update cache
+      // Always use the freshly calculated base data when we make an API call
+      // Update the base data cache with the new values
+      this.baseDataCache = baseData;
+      this.baseDataCacheTimestamp = Date.now();
+
+      const result = {
+        ...baseData,
+        dailyChartData,
+        monthlyChartData
+      };
+
+      // Update full cache (depends on dailyChartDays)
       this.cache = result;
       this.cacheTimestamp = Date.now();
       this.cacheDailyChartDays = dailyChartDays;

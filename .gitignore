@@ -25,6 +25,7 @@ scripts/*-dump.json
 
 # Data files (cached/scraped data)
 data/
+server/electricity-data.json
 
 # OS files
 .DS_Store

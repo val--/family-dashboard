@@ -54,6 +54,9 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
   }
 
   const formatValue = (value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '0,00';
+    }
     return value.toLocaleString('fr-FR', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
@@ -121,9 +124,9 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
           <div className="electricity-stat-card electricity-stat-today">
             <div className="electricity-stat-label">Hier</div>
             <div className="electricity-stat-value">
-              {formatValue(data.yesterday)} <span className="electricity-stat-unit">kWh</span>
+              {formatValue(data.yesterday || 0)} <span className="electricity-stat-unit">kWh</span>
             </div>
-            {data.dayBeforeYesterday > 0 && (
+            {data.dayBeforeYesterday > 0 && data.yesterday !== undefined && data.yesterday !== null && (
               <div className="electricity-stat-comparison">
                 {data.yesterday < data.dayBeforeYesterday ? (
                   <>

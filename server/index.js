@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const calendarService = require('./calendar');
 const electricityService = require('./electricity');
 const nantesEventsService = require('./nantes-events');
@@ -104,15 +105,86 @@ app.get('/api/pullrouge-events', async (req, res) => {
   }
 });
 
-// Electricity API route
+// Path to electricity data cache file
+const DATA_DIR = path.join(__dirname, 'data');
+const ELECTRICITY_DATA_FILE = path.join(DATA_DIR, 'electricity-data.json');
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// Function to calculate and save electricity data
+async function updateElectricityData() {
+  try {
+    console.log('[Electricity] Calculating and saving electricity data...');
+    // Calculate data for 15 days (this gives us all the data we need)
+    const data15 = await electricityService.getWidgetData(15);
+    
+    // Create data7 by copying base data and slicing dailyChartData to last 7 days
+    // This ensures yesterday, weekTotal, etc. are identical in both
+    const data7 = {
+      ...data15,
+      dailyChartData: data15.dailyChartData.slice(-7)
+    };
+    
+    const cacheData = {
+      lastUpdate: new Date().toISOString(),
+      data7,
+      data15
+    };
+    
+    fs.writeFileSync(ELECTRICITY_DATA_FILE, JSON.stringify(cacheData, null, 2));
+    console.log('[Electricity] Data saved successfully');
+    console.log(`[Electricity] Yesterday value: ${data7.yesterday} kWh (should be same in data7 and data15: ${data15.yesterday} kWh)`);
+  } catch (error) {
+    console.error('[Electricity] Error updating data:', error);
+  }
+}
+
+// Electricity API route - now reads from JSON file
 app.get('/api/electricity', async (req, res) => {
   try {
-    // Option to clear cache via query parameter
-    if (req.query.clearCache === 'true') {
-      electricityService.clearCache();
-    }
     const dailyChartDays = req.query.dailyChartDays ? parseInt(req.query.dailyChartDays, 10) : 7;
-    const data = await electricityService.getWidgetData(dailyChartDays);
+    const forceUpdate = req.query.forceUpdate === 'true';
+    
+    // Force update if requested
+    if (forceUpdate) {
+      console.log('[Electricity] Force update requested, calculating new data...');
+      await updateElectricityData();
+    }
+    
+    // Try to read from cache file
+    let data = null;
+    if (fs.existsSync(ELECTRICITY_DATA_FILE)) {
+      try {
+        const cacheData = JSON.parse(fs.readFileSync(ELECTRICITY_DATA_FILE, 'utf8'));
+        // Use data7 for 7 days or less, data15 for more
+        data = dailyChartDays <= 7 ? cacheData.data7 : cacheData.data15;
+        
+        // If requesting a different number of days, we need to recalculate
+        // But for now, return the closest match (7 or 15)
+        if (dailyChartDays !== 7 && dailyChartDays !== 15) {
+          // For other values, use data15 and adjust dailyChartData if needed
+          if (dailyChartDays < 15 && data === cacheData.data15) {
+            // Slice the dailyChartData to the requested number of days
+            data = {
+              ...cacheData.data15,
+              dailyChartData: cacheData.data15.dailyChartData.slice(-dailyChartDays)
+            };
+          }
+        }
+      } catch (error) {
+        console.error('[Electricity] Error reading cache file:', error);
+        // Fallback to API call if file is corrupted
+        data = await electricityService.getWidgetData(dailyChartDays);
+      }
+    } else {
+      // If no cache file exists, calculate on the fly (shouldn't happen in normal operation)
+      console.warn('[Electricity] No cache file found, calculating on the fly...');
+      data = await electricityService.getWidgetData(dailyChartDays);
+    }
+    
     res.json({ data, success: true });
   } catch (error) {
     console.error('Error in /api/electricity:', error);
@@ -810,6 +882,25 @@ if (process.env.NODE_ENV === 'production') {
     console.error('[PullRouge] Error during initial refresh:', error);
   }
 })();
+
+// Initialize electricity data on startup
+(async () => {
+  try {
+    console.log('[Electricity] Initial data calculation on startup...');
+    await updateElectricityData();
+  } catch (error) {
+    console.error('[Electricity] Error during initial data calculation:', error);
+  }
+})();
+
+// Update electricity data every hour
+setInterval(async () => {
+  try {
+    await updateElectricityData();
+  } catch (error) {
+    console.error('[Electricity] Error during periodic update:', error);
+  }
+}, 60 * 60 * 1000); // 1 hour
 
 // Initialize Nantes categories on startup
 (async () => {
