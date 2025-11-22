@@ -301,15 +301,25 @@ function BusWidget() {
 
       {showModal && busData && (
         <div 
-          className="bus-modal-overlay" 
+          className="weather-modal-overlay" 
           onClick={handleModalOverlayClick}
           onTouchEnd={handleModalOverlayClick}
         >
-          <div className="bus-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="bus-modal-header">
-              <h2 className="bus-modal-title">Prochains départs</h2>
+          <div className="weather-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="weather-modal-header">
+              <div className="bus-modal-header-left">
+                <h2 className="weather-modal-title">Prochains départs</h2>
+                {busData.lastUpdate && (
+                  <span className="bus-modal-last-update">
+                    Mise à jour: {new Date(busData.lastUpdate).toLocaleTimeString('fr-FR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </span>
+                )}
+              </div>
               <button 
-                className="bus-modal-close" 
+                className="weather-modal-close" 
                 onClick={handleModalClose}
                 onTouchEnd={(e) => {
                   e.preventDefault();
@@ -319,97 +329,145 @@ function BusWidget() {
                 ×
               </button>
             </div>
-            <div className="bus-modal-content">
+            <div className="weather-modal-content">
               <div className="bus-modal-info">
-                {busData.lastUpdate && (
-                  <div className="bus-modal-stop-info">
-                    <p><strong>Dernière mise à jour:</strong> {new Date(busData.lastUpdate).toLocaleString('fr-FR', { 
-                      day: '2-digit', 
-                      month: '2-digit', 
-                      year: 'numeric',
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}</p>
-                  </div>
-                )}
-
                 {filteredDepartures && filteredDepartures.length > 0 && (
-                  <div className="bus-modal-departures">
-                    <h3 className="bus-modal-section-title">Tous les prochains départs</h3>
-                    
-                    {/* Grouper par arrêt, puis par ligne et direction */}
-                    {(() => {
-                      // Créer une liste d'arrêts uniques depuis les départs
-                      const uniqueStops = {};
-                      filteredDepartures.forEach(dep => {
-                        if (dep.stopId && dep.stopName) {
-                          if (!uniqueStops[dep.stopId]) {
-                            uniqueStops[dep.stopId] = {
-                              stopId: dep.stopId,
-                              stopName: dep.stopName
-                            };
+                  <div className="bus-modal-departures-compact">
+                    <div className="bus-modal-two-columns">
+                      {/* Colonne gauche : Ligne 30 */}
+                      <div className="bus-modal-column bus-modal-column-left">
+                        <h4 className="bus-modal-column-title">
+                          <span className="bus-line-number bus-line-30">30</span>
+                          <span>Ligne 30</span>
+                        </h4>
+                        {(() => {
+                          const line30Departures = filteredDepartures.filter(dep => dep.line === '30');
+                          if (line30Departures.length === 0) {
+                            return <div className="bus-modal-empty-column">Aucun départ</div>;
                           }
-                        }
-                      });
-                      
-                      // Utiliser busData.stops si disponible, sinon utiliser les arrêts uniques trouvés
-                      const stopsToDisplay = busData.stops && Array.isArray(busData.stops) && busData.stops.length > 0
-                        ? busData.stops
-                        : Object.values(uniqueStops);
-                      
-                      return stopsToDisplay.map(stop => {
-                        const stopDepartures = filteredDepartures.filter(dep => dep.stopId === stop.stopId);
-                        if (stopDepartures.length === 0) return null;
-                        
-                        // Grouper par ligne et direction
-                        const byLineAndDirection = stopDepartures.reduce((acc, dep) => {
-                          const key = `${dep.line}-${dep.direction}`;
-                          if (!acc[key]) acc[key] = { line: dep.line, direction: dep.direction, departures: [] };
-                          acc[key].departures.push(dep);
-                          return acc;
-                        }, {});
-                        
-                        return (
-                          <div key={stop.stopId} className="bus-modal-stop-section">
-                            <h4 className="bus-modal-stop-name">{stop.stopName}</h4>
-                            {Object.values(byLineAndDirection)
-                              .sort((a, b) => {
-                                if (a.line !== b.line) {
-                                  if (a.line === '30') return -1;
-                                  if (b.line === '30') return 1;
-                                  return a.line.localeCompare(b.line);
-                                }
-                                return a.direction.localeCompare(b.direction);
-                              })
-                              .map((group, idx) => (
-                                <div key={idx} className="bus-modal-direction-group">
-                                  <h5 className="bus-modal-direction-title">
-                                    <span className={`bus-line-number ${group.line === '30' ? 'bus-line-30' : group.line === 'C4' ? 'bus-line-c4' : ''}`}>{group.line}</span>
-                                    <span>Vers {group.direction}</span>
-                                  </h5>
-                                  <div className="bus-modal-departures-list">
-                                    {group.departures.map((departure, index) => (
-                                      <div key={index} className="bus-modal-departure-detail">
-                                        <div className="bus-modal-departure-time-detail">
-                                          <span className="bus-modal-time-value">{departure.time}</span>
-                                          {departure.isRealTime && (
-                                            <span className="bus-realtime-indicator" title="Temps réel">●</span>
-                                          )}
-                                        </div>
-                                        {departure.platform && (
-                                          <div className="bus-modal-platform">
-                                            Quai: {departure.platform}
-                                          </div>
+                          
+                          // Grouper par direction
+                          const byDirection = line30Departures.reduce((acc, dep) => {
+                            if (!acc[dep.direction]) {
+                              acc[dep.direction] = [];
+                            }
+                            acc[dep.direction].push(dep);
+                            return acc;
+                          }, {});
+                          
+                          return Object.entries(byDirection).map(([direction, departures]) => (
+                            <div key={direction} className="bus-modal-direction-compact">
+                              <div className="bus-modal-direction-label">Vers {direction}</div>
+                              <div className="bus-modal-departures-compact-list">
+                                {departures.map((departure, index) => {
+                                  // Calculer l'heure de passage
+                                  const calculatePassageTime = (timeStr) => {
+                                    if (timeStr === 'Départ proche') {
+                                      const now = new Date(currentTime);
+                                      return now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                                    }
+                                    const match = timeStr.match(/(\d+)\s*mn/);
+                                    if (match) {
+                                      const minutes = parseInt(match[1]);
+                                      const passageTime = new Date(currentTime);
+                                      passageTime.setMinutes(passageTime.getMinutes() + minutes);
+                                      return passageTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                                    }
+                                    return null;
+                                  };
+                                  
+                                  const passageTime = calculatePassageTime(departure.time);
+                                  
+                                  return (
+                                    <div key={index} className="bus-modal-departure-compact">
+                                      <div className="bus-modal-departure-time-compact">
+                                        <span className="bus-modal-time-wait">{departure.time}</span>
+                                        {passageTime && (
+                                          <span className="bus-modal-time-passage">{passageTime}</span>
+                                        )}
+                                        {departure.isRealTime && (
+                                          <span className="bus-realtime-indicator" title="Temps réel">●</span>
                                         )}
                                       </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        );
-                      });
-                    })()}
+                                      {departure.platform && (
+                                        <div className="bus-modal-platform-compact">Quai: {departure.platform}</div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                      
+                      {/* Colonne droite : Ligne C4 */}
+                      <div className="bus-modal-column bus-modal-column-right">
+                        <h4 className="bus-modal-column-title">
+                          <span className="bus-line-number bus-line-c4">C4</span>
+                          <span>Ligne C4</span>
+                        </h4>
+                        {(() => {
+                          const lineC4Departures = filteredDepartures.filter(dep => dep.line === 'C4');
+                          if (lineC4Departures.length === 0) {
+                            return <div className="bus-modal-empty-column">Aucun départ</div>;
+                          }
+                          
+                          // Grouper par direction
+                          const byDirection = lineC4Departures.reduce((acc, dep) => {
+                            if (!acc[dep.direction]) {
+                              acc[dep.direction] = [];
+                            }
+                            acc[dep.direction].push(dep);
+                            return acc;
+                          }, {});
+                          
+                          return Object.entries(byDirection).map(([direction, departures]) => (
+                            <div key={direction} className="bus-modal-direction-compact">
+                              <div className="bus-modal-direction-label">Vers {direction}</div>
+                              <div className="bus-modal-departures-compact-list">
+                                {departures.map((departure, index) => {
+                                  // Calculer l'heure de passage
+                                  const calculatePassageTime = (timeStr) => {
+                                    if (timeStr === 'Départ proche') {
+                                      const now = new Date(currentTime);
+                                      return now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                                    }
+                                    const match = timeStr.match(/(\d+)\s*mn/);
+                                    if (match) {
+                                      const minutes = parseInt(match[1]);
+                                      const passageTime = new Date(currentTime);
+                                      passageTime.setMinutes(passageTime.getMinutes() + minutes);
+                                      return passageTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                                    }
+                                    return null;
+                                  };
+                                  
+                                  const passageTime = calculatePassageTime(departure.time);
+                                  
+                                  return (
+                                    <div key={index} className="bus-modal-departure-compact">
+                                      <div className="bus-modal-departure-time-compact">
+                                        <span className="bus-modal-time-wait">{departure.time}</span>
+                                        {passageTime && (
+                                          <span className="bus-modal-time-passage">{passageTime}</span>
+                                        )}
+                                        {departure.isRealTime && (
+                                          <span className="bus-realtime-indicator" title="Temps réel">●</span>
+                                        )}
+                                      </div>
+                                      {departure.platform && (
+                                        <div className="bus-modal-platform-compact">Quai: {departure.platform}</div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 )}
 

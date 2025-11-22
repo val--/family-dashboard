@@ -1349,16 +1349,16 @@ body.spotify-page #root {
   justify-content: center;
   z-index: 10001;
   animation: fadeIn 0.2s ease-out;
-  padding: 20px;
+  padding: 10px;
   box-sizing: border-box;
 }
 
 .event-modal {
   background: #ffffff;
   border-radius: 12px;
-  max-width: 600px;
+  max-width: 96vw;
   width: 100%;
-  max-height: 80vh;
+  max-height: 96vh;
   overflow-y: auto;
   position: relative;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -1366,10 +1366,10 @@ body.spotify-page #root {
 }
 
 .event-modal.event-modal-with-image {
-  max-width: 90vw;
+  max-width: 96vw;
   width: 100%;
-  max-width: 1200px;
-  max-height: 90vh;
+  max-width: 1400px;
+  max-height: 96vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2724,16 +2724,16 @@ body.spotify-page #root {
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  padding: 20px;
+  padding: 10px;
   animation: modalFadeIn 0.3s ease-out;
 }
 
 .weather-modal {
   background: white;
   border-radius: 12px;
-  max-width: 90vw;
+  max-width: 96vw;
   width: 100%;
-  max-height: 90vh;
+  max-height: 96vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -4419,16 +4419,16 @@ body.spotify-page #root {
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  padding: 20px;
+  padding: 10px;
   animation: modalFadeIn 0.3s ease-out;
 }
 
 .bus-modal {
   background: white;
   border-radius: 12px;
-  max-width: 90vw;
+  max-width: 96vw;
   width: 100%;
-  max-height: 90vh;
+  max-height: 96vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -4445,14 +4445,34 @@ body.spotify-page #root {
   flex-shrink: 0;
 }
 
+.bus-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.weather-modal-header .bus-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
 .bus-modal-title {
   font-size: 20px;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
-  flex: 1;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+}
+
+.bus-modal-last-update {
+  font-size: 12px;
+  color: #868e96;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 .bus-modal-close {
@@ -4488,7 +4508,7 @@ body.spotify-page #root {
 .bus-modal-info {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
 .bus-modal-stop-info {
@@ -4595,19 +4615,138 @@ body.spotify-page #root {
   font-size: 14px;
 }
 
-@media (max-width: 768px) {
-  .bus-modal {
+/* Bus Modal Compact Styles */
+.bus-modal-departures-compact {
+  margin-top: 0;
+}
+
+.bus-modal-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 0;
+}
+
+.bus-modal-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px;
+  border-right: 2px solid #e9ecef;
+}
+
+.bus-modal-column:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.bus-modal-column:first-child {
+  padding-left: 0;
+}
+
+.bus-modal-column-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.bus-modal-column-title .bus-line-number {
+  min-width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.bus-modal-direction-compact {
+  margin-bottom: 8px;
+}
+
+.bus-modal-direction-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+}
+
+.bus-modal-departures-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bus-modal-departure-compact {
+  padding: 8px 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bus-modal-departure-time-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bus-modal-time-wait {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.bus-modal-time-passage {
+  font-size: 13px;
+  color: #868e96;
+  font-variant-numeric: tabular-nums;
+}
+
+.bus-modal-platform-compact {
+  font-size: 11px;
+  color: #868e96;
+  margin-top: 2px;
+}
+
+.bus-modal-empty-column {
+  text-align: center;
+  padding: 20px;
+  color: #868e96;
+  font-size: 12px;
+  font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .weather-modal {
     max-width: 100%;
     max-height: 95vh;
     margin: 10px;
   }
 
-  .bus-modal-header {
+  .weather-modal-header {
     padding: 16px 20px;
   }
 
-  .bus-modal-title {
+  .weather-modal-title {
     font-size: 18px;
+  }
+
+  .weather-modal-content {
+    padding: 16px;
+  }
+
+  .bus-modal-two-columns {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .bus-modal-column {
+    padding: 0 8px;
   }
 
   .bus-modal-iframe {
@@ -4836,15 +4975,15 @@ body.spotify-page #root {
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  padding: 20px;
+  padding: 10px;
 }
 
 .news-modal {
   background: white;
   border-radius: 12px;
-  max-width: 900px;
+  max-width: 96vw;
   width: 100%;
-  max-height: 85vh;
+  max-height: 96vh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: modalFadeIn 0.3s ease-out;
