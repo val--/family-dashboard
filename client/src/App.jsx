@@ -478,11 +478,10 @@ function SpotifyPageWrapper() {
 
 function AppContent() {
   const location = useLocation();
-  // Activer l'écran de veille après le délai d'inactivité configuré
-  // Ne pas activer le screensaver sur la page Spotify
-  const shouldDisableScreensaver = location.pathname === '/spotify';
+  // Activer l'écran de veille uniquement sur la page d'accueil
+  const shouldEnableScreensaver = location.pathname === '/';
   const { isScreensaverActive, registerActivity, activateScreensaver } = useScreensaver(
-    shouldDisableScreensaver ? null : SCREENSAVER_IDLE_TIME
+    shouldEnableScreensaver ? SCREENSAVER_IDLE_TIME : null
   );
 
   return (

@@ -8,3 +8,4 @@ export const useScreensaverContext = () => {
   return context;
 };
 
+
