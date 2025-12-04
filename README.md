@@ -331,13 +331,13 @@ Le projet peut être déployé facilement avec Docker et Docker Compose.
 
 ```bash
 # Build et démarrage
-docker-compose up -d
+docker compose up -d
 
 # Voir les logs
-docker-compose logs -f
+docker compose logs -f
 
 # Arrêter
-docker-compose down
+docker compose down
 ```
 
 Le dashboard sera accessible sur `http://localhost:5000` (ou le port configuré dans `.env`).
@@ -346,19 +346,19 @@ Le dashboard sera accessible sur `http://localhost:5000` (ou le port configuré 
 
 ```bash
 # Rebuild après modification du code
-docker-compose up -d --build
+docker compose up -d --build
 
 # Voir les logs en temps réel
-docker-compose logs -f dashboard
+docker compose logs -f dashboard
 
 # Redémarrer le conteneur
-docker-compose restart dashboard
+docker compose restart dashboard
 
 # Arrêter et supprimer les conteneurs
-docker-compose down
+docker compose down
 
 # Arrêter, supprimer et nettoyer les volumes
-docker-compose down -v
+docker compose down -v
 ```
 
 ## Idées / TODO
