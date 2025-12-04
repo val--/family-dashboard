@@ -244,7 +244,8 @@ class ElectricityService {
       // Get daily consumption for the requested period (7 days by default, or more if dailyChartDays > 7)
       const daysToFetch = Math.max(7, dailyChartDays);
       const fetchStart = subDays(startOfToday, daysToFetch);
-      const dailyData = await this.getDailyConsumption(fetchStart, startOfToday);
+      // For the most recent days, bypass MyElectricalData cache to avoid stale data on \"hier\"
+      const dailyData = await this.getDailyConsumption(fetchStart, startOfToday, false);
       
       // Add delay between API calls to respect rate limits
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -377,7 +378,7 @@ class ElectricityService {
           });
         }
 
-        // Get yesterday's consumption
+        // Get yesterday's consumption (strictly D-1, even if it's 0)
         const yesterday = format(subDays(startOfToday, 1), 'yyyy-MM-dd');
         const yesterdayReading = readings.find(r => {
           const readingDate = r.date || r.Date || r.start || r.Start;
@@ -386,9 +387,11 @@ class ElectricityService {
         if (yesterdayReading) {
           const rawValue = yesterdayReading.value || yesterdayReading.Value || yesterdayReading.energy || yesterdayReading.Energy || 0;
           yesterdayConsumption = parseFloat(rawValue) / conversionFactor;
+        } else {
+          yesterdayConsumption = 0;
         }
 
-        // Get day before yesterday's consumption
+        // Get day before yesterday's consumption (D-2, even if it's 0)
         const dayBeforeYesterday = format(subDays(startOfToday, 2), 'yyyy-MM-dd');
         const dayBeforeYesterdayReading = readings.find(r => {
           const readingDate = r.date || r.Date || r.start || r.Start;
@@ -397,6 +400,8 @@ class ElectricityService {
         if (dayBeforeYesterdayReading) {
           const rawValue = dayBeforeYesterdayReading.value || dayBeforeYesterdayReading.Value || dayBeforeYesterdayReading.energy || dayBeforeYesterdayReading.Energy || 0;
           dayBeforeYesterdayConsumption = parseFloat(rawValue) / conversionFactor;
+        } else {
+          dayBeforeYesterdayConsumption = 0;
         }
       }
 

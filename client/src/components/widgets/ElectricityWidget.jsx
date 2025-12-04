@@ -63,46 +63,67 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
     });
   };
 
+  // Derive \"hier\" et \"avant-hier\" à partir de la courbe pour rester cohérent avec le graphe.
+  const chartDataAll = data.dailyChartData && data.dailyChartData.length > 0
+    ? data.dailyChartData
+    : [];
+
+  let yesterdayValue = data.yesterday;
+  let dayBeforeYesterdayValue = data.dayBeforeYesterday;
+
+  if (chartDataAll.length >= 2) {
+    yesterdayValue = chartDataAll[chartDataAll.length - 2].value;
+  }
+  if (chartDataAll.length >= 3) {
+    dayBeforeYesterdayValue = chartDataAll[chartDataAll.length - 3].value;
+  }
+
   // In compact mode, only show the 7-day chart
   if (compact) {
     // Limit dailyChartData to last 7 days
-    const chartData = data.dailyChartData && data.dailyChartData.length > 0 
-      ? data.dailyChartData.slice(-7) 
+    const chartData = chartDataAll.length > 0 
+      ? chartDataAll.slice(-7) 
       : [];
 
     return (
       <div className="electricity-widget" onClick={onClick ? undefined : handleClick} style={widgetStyle}>
-        <div className="electricity-widget-header">
-          <h2 className="electricity-widget-title">Consommation Électrique</h2>
-        </div>
         <div className="electricity-widget-content">
           {chartData.length > 0 ? (
-            <div className="electricity-stat-card electricity-stat-chart">
-              <div className="electricity-stat-label">Évolution sur 7 jours</div>
-              <div className="electricity-chart">
-                {chartData.map((day, index) => {
-                  const maxValue = Math.max(...chartData.map(d => d.value), 1);
-                  const height = maxValue > 0 ? (day.value / maxValue) * 100 : 0;
-                  const isToday = index === chartData.length - 1;
-                  
-                  
-                  return (
-                    <div key={day.date} className="electricity-chart-bar-container">
-                      <div className="electricity-chart-bar-wrapper">
-                        <div 
-                          className={`electricity-chart-bar ${isToday ? 'electricity-chart-bar-today' : ''}`}
-                          style={{ height: `${height}%` }}
-                          title={isToday ? `${day.dateLabel}: à venir` : `${day.dateLabel}: ${formatValue(day.value)} kWh`}
-                        >
-                          <span className="electricity-chart-bar-value">
-                            {isToday ? 'à venir' : (day.value > 0 ? formatValue(day.value) : '')}
-                          </span>
+            <div className="electricity-stats">
+              <div className="electricity-stat-card electricity-stat-today">
+                <div className="electricity-stat-label">Hier</div>
+                <div className="electricity-stat-value">
+                  {formatValue(yesterdayValue || 0)} <span className="electricity-stat-unit">kWh</span>
+                </div>
+              </div>
+
+              <div className="electricity-stat-card electricity-stat-chart">
+                <div className="electricity-stat-label">Évolution sur 7 jours</div>
+                <div className="electricity-chart">
+                  {chartData.map((day, index) => {
+                    const maxValue = Math.max(...chartData.map(d => d.value), 1);
+                    const height = maxValue > 0 ? (day.value / maxValue) * 100 : 0;
+                    const isToday = index === chartData.length - 1;
+                    
+                    
+                    return (
+                      <div key={day.date} className="electricity-chart-bar-container">
+                        <div className="electricity-chart-bar-wrapper">
+                          <div 
+                            className={`electricity-chart-bar ${isToday ? 'electricity-chart-bar-today' : ''}`}
+                            style={{ height: `${height}%` }}
+                            title={isToday ? `${day.dateLabel}: à venir` : `${day.dateLabel}: ${formatValue(day.value)} kWh`}
+                          >
+                            <span className="electricity-chart-bar-value">
+                              {isToday ? 'à venir' : (day.value > 0 ? formatValue(day.value) : '')}
+                            </span>
+                          </div>
                         </div>
+                        <div className="electricity-chart-label">{day.dateLabel}</div>
                       </div>
-                      <div className="electricity-chart-label">{day.dateLabel}</div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : (
@@ -122,17 +143,17 @@ function ElectricityWidget({ data, loading, error, onClick, compact = false }) {
             <div className="electricity-stat-card electricity-stat-today">
               <div className="electricity-stat-label">Hier</div>
               <div className="electricity-stat-value">
-                {formatValue(data.yesterday || 0)} <span className="electricity-stat-unit">kWh</span>
+                {formatValue(yesterdayValue || 0)} <span className="electricity-stat-unit">kWh</span>
               </div>
-              {data.dayBeforeYesterday > 0 && data.yesterday !== undefined && data.yesterday !== null && (
+              {dayBeforeYesterdayValue > 0 && yesterdayValue !== undefined && yesterdayValue !== null && (
                 <div className="electricity-stat-comparison">
-                  {data.yesterday < data.dayBeforeYesterday ? (
+                  {yesterdayValue < dayBeforeYesterdayValue ? (
                     <>
-                      <span className="electricity-stat-comparison-better">↓</span> Mieux que la veille ({Math.abs(data.yesterday - data.dayBeforeYesterday).toFixed(2)} kWh de moins)
+                      <span className="electricity-stat-comparison-better">↓</span> Mieux que la veille ({Math.abs(yesterdayValue - dayBeforeYesterdayValue).toFixed(2)} kWh de moins)
                     </>
-                  ) : data.yesterday > data.dayBeforeYesterday ? (
+                  ) : yesterdayValue > dayBeforeYesterdayValue ? (
                     <>
-                      <span className="electricity-stat-comparison-worse">↑</span> En hausse par rapport à la veille (+{Math.abs(data.yesterday - data.dayBeforeYesterday).toFixed(2)} kWh)
+                      <span className="electricity-stat-comparison-worse">↑</span> En hausse par rapport à la veille (+{Math.abs(yesterdayValue - dayBeforeYesterdayValue).toFixed(2)} kWh)
                     </>
                   ) : (
                     <>
