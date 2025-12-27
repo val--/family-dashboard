@@ -40,17 +40,6 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
     return events.find(e => e.id === selectedEvent);
   }, [selectedEvent, events]);
 
-  if (!events || events.length === 0) {
-    return (
-      <div className="calendar">
-        <h1 className="calendar-title">Aujourd'hui</h1>
-        <div className="no-events">
-          <p>Aucun événement à venir</p>
-        </div>
-      </div>
-    );
-  }
-
   // Close dropdown when clicking outside and prevent scroll when open
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -264,38 +253,47 @@ function Calendar({ events, showGoogleEvents, showNantesEvents, showPullrougeEve
           )}
         </div>
       </div>
-      {sortedDateKeys.map((dateKey, dateIndex) => {
-        const dateEvents = eventsByDate[dateKey];
-        const dateTitle = getDateTitle(dateKey);
-        const isLastSection = dateIndex === sortedDateKeys.length - 1;
-        
-        return (
-          <div key={dateKey} className="date-section">
-            <h1 className="calendar-title">{dateTitle}</h1>
-            <ul className="events-list">
-              {dateEvents.map((event) => {
-                const isSelected = selectedEvent === event.id;
-                    
-                    return (
-                      <li key={event.id}>
-                        <EventItem 
-                          event={event} 
-                          compact={false}
-                          isSelected={isSelected}
-                          onClick={() => handleEventClick(event.id)}
-                        />
-                      </li>
-                    );
-              })}
-            </ul>
-            {isLastSection && !loadingMoreNantes && !(showNantesEvents && nantesHasMore) && (
-              <div className="calendar-end-message">
-                <p>Rien d'autre pour le moment !</p>
-              </div>
-            )}
+      {sortedDateKeys.length === 0 ? (
+        <div className="date-section">
+          <h1 className="calendar-title">Aujourd'hui</h1>
+          <div className="no-events">
+            <p>Aucun événement à venir</p>
           </div>
-        );
-      })}
+        </div>
+      ) : (
+        sortedDateKeys.map((dateKey, dateIndex) => {
+          const dateEvents = eventsByDate[dateKey];
+          const dateTitle = getDateTitle(dateKey);
+          const isLastSection = dateIndex === sortedDateKeys.length - 1;
+          
+          return (
+            <div key={dateKey} className="date-section">
+              <h1 className="calendar-title">{dateTitle}</h1>
+              <ul className="events-list">
+                {dateEvents.map((event) => {
+                  const isSelected = selectedEvent === event.id;
+                      
+                      return (
+                        <li key={event.id}>
+                          <EventItem 
+                            event={event} 
+                            compact={false}
+                            isSelected={isSelected}
+                            onClick={() => handleEventClick(event.id)}
+                          />
+                        </li>
+                      );
+                })}
+              </ul>
+              {isLastSection && !loadingMoreNantes && !(showNantesEvents && nantesHasMore) && (
+                <div className="calendar-end-message">
+                  <p>Rien d'autre pour le moment !</p>
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
       {/* Render modal only once, outside the map */}
       {selectedEventObj && (
         <div className="event-modal-overlay" onClick={handleCloseModal}>
