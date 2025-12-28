@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Hook simple pour activer le drag-to-scroll vertical avec la souris
- * @param {string|string[]} ignoreSelectors - Sélecteurs CSS à ignorer (ex: 'a, button, .event-item')
- * @returns {React.RefObject} - Référence à attacher au conteneur
+ * Simple hook to enable vertical drag-to-scroll with the mouse
+ * @param {string|string[]} ignoreSelectors - CSS selectors to ignore (e.g.: 'a, button, .event-item')
+ * @returns {React.RefObject} - Reference to attach to the container
  */
 export function useSimpleDragScroll(ignoreSelectors = 'a, button') {
   const containerRef = useRef(null);
@@ -12,7 +12,7 @@ export function useSimpleDragScroll(ignoreSelectors = 'a, button') {
     const container = containerRef.current;
     if (!container) return;
 
-    // Convertir ignoreSelectors en tableau si c'est une string
+    // Convert ignoreSelectors to array if it's a string
     const selectors = Array.isArray(ignoreSelectors) 
       ? ignoreSelectors 
       : ignoreSelectors.split(',').map(s => s.trim());
@@ -23,12 +23,12 @@ export function useSimpleDragScroll(ignoreSelectors = 'a, button') {
     let startScrollTop = 0;
 
     const onMouseDown = (e) => {
-      // Vérifier si le clic est sur un élément à ignorer
+      // Check if the click is on an element to ignore
       const shouldIgnore = selectors.some(selector => {
         try {
           return e.target.closest(selector);
         } catch (err) {
-          // Si le sélecteur est invalide, on l'ignore
+          // If the selector is invalid, ignore it
           return false;
         }
       });
@@ -71,6 +71,7 @@ export function useSimpleDragScroll(ignoreSelectors = 'a, button') {
 
   return containerRef;
 }
+
 
 
 

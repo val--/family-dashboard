@@ -1,12 +1,13 @@
 import { createContext, useContext } from 'react';
 
-// Contexte pour partager la fonction d'activation du screensaver
+// Context to share the screensaver activation function
 export const ScreensaverContext = createContext(null);
 
 export const useScreensaverContext = () => {
   const context = useContext(ScreensaverContext);
   return context;
 };
+
 
 
 

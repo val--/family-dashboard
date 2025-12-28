@@ -172,11 +172,33 @@ Le fichier `.env` est automatiquement chargé et n'est pas commité dans git (il
 
 ## Installation
 
+### Avec Make (recommandé)
+
+```bash
+make install
+```
+
+Ou pour une installation complète avec vérifications :
+
+```bash
+make setup
+```
+
+### Avec npm
+
 ```bash
 npm run install:all
 ```
 
 ## Développement
+
+### Avec Make (recommandé)
+
+```bash
+make dev
+```
+
+### Avec npm
 
 ```bash
 npm run dev
@@ -188,6 +210,15 @@ Frontend : `http://localhost:3000`
 Le serveur est accessible sur votre réseau local à `http://<votre-ip>:5000`
 
 ## Production
+
+### Avec Make (recommandé)
+
+```bash
+make build
+make start
+```
+
+### Avec npm
 
 ```bash
 npm run build
@@ -217,7 +248,7 @@ La configuration se fait via le fichier `.env` (voir la section Configuration ci
 - `WEATHER_LANG` : Langue des descriptions météo (par défaut : fr)
 
 ### Bus
-- `BUS_STOP_ID` : Code de l'arrêt de bus (ex: "LHOU" pour "La Houssais" à Rezé)
+- `BUS_STOP_ID` : Code de l'arrêt de bus
 - `BUS_STOP_NAME` : Nom de l'arrêt de bus (optionnel, pour affichage)
 
 ### Philips Hue
@@ -293,7 +324,38 @@ Le système utilise un cache pour les actualités :
 - **Gestion d'erreur** : Les erreurs ne sont loggées qu'une fois toutes les 5 minutes
 - **Catégories supportées** : Actualités, Tech, Crime, Divertissement, Mode de vie, Monde, National, Éducation, Environnement, Santé, Politique, Tourisme
 
-## Scripts
+## Commandes disponibles
+
+### Avec Make (recommandé)
+
+Le projet inclut un `Makefile` avec des commandes pratiques. Utilisez `make help` pour voir toutes les commandes disponibles.
+
+**Commandes principales :**
+- `make install` : Installer toutes les dépendances
+- `make setup` : Vérifier les fichiers de configuration et installer les dépendances
+- `make dev` : Démarrer le serveur de développement
+- `make build` : Construire le frontend pour la production
+- `make start` : Démarrer le serveur de production
+- `make clean` : Nettoyer les node_modules et les fichiers de build
+
+**Commandes Docker :**
+- `make docker-build` : Construire l'image Docker
+- `make docker-up` : Démarrer le conteneur Docker
+- `make docker-down` : Arrêter le conteneur Docker
+- `make docker-logs` : Afficher les logs du conteneur
+- `make docker-restart` : Redémarrer le conteneur Docker
+- `make docker-rebuild` : Reconstruire et redémarrer le conteneur
+- `make docker-clean` : Nettoyer les ressources Docker
+
+**Scripts utilitaires :**
+- `make find-email` : Obtenir l'email du compte de service depuis les credentials
+- `make fetch-events` : Tester la récupération des événements du calendrier
+- `make fetch-electricity` : Tester la récupération des données électriques
+- `make fetch-news` : Tester la récupération des actualités
+- `make find-bus-stop` : Rechercher un arrêt de bus par nom
+- `make create-hue-key` : Créer une clé d'application Hue
+
+### Avec npm
 
 - `npm run dev` : Démarrer le serveur de développement (backend + frontend)
 - `npm run build` : Construire le frontend pour la production
@@ -329,6 +391,21 @@ Le projet peut être déployé facilement avec Docker et Docker Compose.
 
 #### Démarrage
 
+**Avec Make (recommandé) :**
+
+```bash
+# Build et démarrage
+make docker-up
+
+# Voir les logs
+make docker-logs
+
+# Arrêter
+make docker-down
+```
+
+**Avec docker compose :**
+
 ```bash
 # Build et démarrage
 docker compose up -d
@@ -340,9 +417,27 @@ docker compose logs -f
 docker compose down
 ```
 
-Le dashboard sera accessible sur `http://localhost:5000` (ou le port configuré dans `.env`).
+Le dashboard sera accessible sur `http://localhost:5001` (ou le port configuré dans `.env`).
 
 #### Commandes utiles
+
+**Avec Make :**
+
+```bash
+# Rebuild après modification du code
+make docker-rebuild
+
+# Voir les logs en temps réel
+make docker-logs
+
+# Redémarrer le conteneur
+make docker-restart
+
+# Nettoyer les ressources Docker (conteneurs, volumes, images)
+make docker-clean
+```
+
+**Avec docker compose :**
 
 ```bash
 # Rebuild après modification du code
